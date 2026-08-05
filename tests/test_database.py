@@ -16,6 +16,8 @@ from gl_verse.repositories import SeriesAlreadyExistsError, SeriesRepository
 def connection():
     database = connect_database(":memory:")
     initialize_database(database)
+    database.execute("DELETE FROM series")
+    database.commit()
     yield database
     database.close()
 
@@ -27,7 +29,7 @@ def test_database_uses_current_schema_version(connection: sqlite3.Connection) ->
 def test_series_can_be_saved_and_recovered(connection: sqlite3.Connection) -> None:
     repository = SeriesRepository(connection)
     expected = Series(
-        id="gap-2022",
+        id="gap-test",
         title="GAP",
         original_title="ทฤษฎีสีชมพู",
         country="Tailandia",
@@ -38,7 +40,7 @@ def test_series_can_be_saved_and_recovered(connection: sqlite3.Connection) -> No
 
     repository.add(expected)
 
-    assert repository.get("gap-2022") == expected
+    assert repository.get("gap-test") == expected
 
 
 def test_unknown_series_returns_none(connection: sqlite3.Connection) -> None:
@@ -51,7 +53,7 @@ def test_series_are_listed_alphabetically(connection: sqlite3.Connection) -> Non
     repository = SeriesRepository(connection)
     repository.add(
         Series(
-            id="gap-2022",
+            id="gap-test",
             title="GAP",
             country="Tailandia",
             release_year=2022,
@@ -60,7 +62,7 @@ def test_series_are_listed_alphabetically(connection: sqlite3.Connection) -> Non
     )
     repository.add(
         Series(
-            id="blank-2024",
+            id="blank-test",
             title="Blank",
             country="Tailandia",
             release_year=2024,
@@ -74,7 +76,7 @@ def test_series_are_listed_alphabetically(connection: sqlite3.Connection) -> Non
 def test_duplicate_series_id_is_rejected(connection: sqlite3.Connection) -> None:
     repository = SeriesRepository(connection)
     series = Series(
-        id="gap-2022",
+        id="gap-test",
         title="GAP",
         country="Tailandia",
         release_year=2022,
@@ -82,5 +84,5 @@ def test_duplicate_series_id_is_rejected(connection: sqlite3.Connection) -> None
     )
     repository.add(series)
 
-    with pytest.raises(SeriesAlreadyExistsError, match="gap-2022"):
+    with pytest.raises(SeriesAlreadyExistsError, match="gap-test"):
         repository.add(series)
