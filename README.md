@@ -2,28 +2,32 @@
 
 GL Verse será una base de datos conectada del universo de las series GL: producciones, profesionales, personajes, parejas, plataformas y fuentes, con una capa personal para registrar lo que hemos visto y nuestras valoraciones.
 
-## Estado actual
+## Migraciones SQLite
 
-El dominio representa series, personas, personajes, parejas, industria, disponibilidad, estructura narrativa, guía de visionado y procedencia de los datos.
+La persistencia utiliza migraciones SQL numeradas:
 
-La persistencia utiliza SQLite y migraciones SQL numeradas:
+- `001_initial_schema.sql`: tabla e índices de series.
+- `002_seed_gap.sql`: primera ficha real, *GAP: The Series*.
+- `003_people_characters_credits.sql`: personas, personajes y créditos profesionales.
 
-- `001_initial_schema.sql` crea la tabla e índices de series.
-- `002_seed_gap.sql` añade la primera ficha real: *GAP: The Series*.
+Una base nueva ejecuta todas las migraciones en orden. Una base existente aplica únicamente las versiones pendientes.
 
-Una base nueva ejecuta todas las migraciones en orden. Una base existente ejecuta únicamente las versiones pendientes.
+### Integridad relacional
+
+La versión 3 garantiza desde SQLite que:
+
+- cada personaje pertenece a una serie existente;
+- cada crédito enlaza una serie y una persona existentes;
+- solo los créditos de reparto pueden señalar un personaje;
+- el personaje de un crédito pertenece a esa misma serie;
+- un mismo crédito no puede duplicarse;
+- al eliminar una serie se eliminan sus personajes y créditos relacionados.
+
+Esto impide combinaciones incoherentes aunque los datos se introduzcan fuera de la aplicación.
 
 ### Primera migración de datos
 
-La migración de GAP guarda:
-
-- identificador estable `gap-2022`;
-- título internacional y título original tailandés;
-- país y año de estreno;
-- estado finalizado;
-- una sinopsis breve.
-
-La inserción es idempotente: puede inicializarse la base varias veces sin duplicar GAP. Si ya existe una ficha con ese identificador, la migración respeta sus datos en lugar de sobrescribirlos.
+La ficha de GAP incluye su identificador, títulos, país, año, estado y sinopsis. La inserción es idempotente y respeta cualquier ficha existente con el mismo identificador.
 
 ### Por qué SQLite
 
@@ -66,4 +70,4 @@ ruff check .
 
 ## Próximo paso
 
-Crear la migración estructural para personas, personajes y créditos y completar después la ficha relacional de GAP.
+Añadir la migración de datos con Freen, Becky, Sam, Mon y sus créditos de reparto en GAP.

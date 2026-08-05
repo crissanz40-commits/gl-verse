@@ -2,7 +2,12 @@ import sqlite3
 
 import pytest
 
-from gl_verse.database import connect_database, get_schema_version, initialize_database
+from gl_verse.database import (
+    SCHEMA_VERSION,
+    connect_database,
+    get_schema_version,
+    initialize_database,
+)
 from gl_verse.models import SeriesStatus
 from gl_verse.repositories import SeriesRepository
 
@@ -26,7 +31,7 @@ def test_gap_is_added_when_database_upgrades_from_version_one(
     initialize_database(connection)
 
     gap = repository.get("gap-2022")
-    assert get_schema_version(connection) == 2
+    assert get_schema_version(connection) == SCHEMA_VERSION
     assert gap is not None
     assert gap.title == "GAP: The Series"
     assert gap.original_title == "ทฤษฎีสีชมพู"
