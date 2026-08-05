@@ -11,11 +11,10 @@ La estructura incluye:
 - un paquete Python en `src/gl_verse`;
 - modelos conectados para series, personas, personajes y créditos;
 - parejas artísticas y parejas ficticias como conceptos independientes;
+- productoras, distribuidoras, cadenas y plataformas;
+- disponibilidad por territorio, modalidad de acceso y subtítulos;
 - separación entre información objetiva y futura información personal;
-- un punto de entrada de consola;
-- pruebas automatizadas con pytest;
-- análisis estático con Ruff;
-- validación continua mediante GitHub Actions.
+- pruebas automatizadas y validación continua.
 
 ### Relaciones del universo GL
 
@@ -28,6 +27,15 @@ Las parejas se modelan en dos niveles:
 - `PairingPortrayal` conecta ambas relaciones sin confundirlas.
 
 Así, FreenBecky es una pareja artística, Sam–Mon es una pareja ficticia y `PairingPortrayal` indica que FreenBecky interpreta a Sam–Mon en *GAP*.
+
+La industria y la disponibilidad se modelan por separado:
+
+- `Company` representa una empresa.
+- `SeriesCompany` indica si produce, emite o distribuye una serie.
+- `Platform` representa un servicio donde puede verse.
+- `Availability` registra el territorio, modalidad de acceso, enlace oficial y subtítulos.
+
+Esto permite expresar que *GAP* fue producida por Idol Factory y está disponible gratis en YouTube para España.
 
 ## Preparación del entorno
 
@@ -68,4 +76,4 @@ ruff check .
 
 ## Próximo paso
 
-Añadir productoras, plataformas y disponibilidad para empezar a describir dónde nace y dónde puede verse cada serie.
+Modelar temporadas y episodios para representar series simples, historias con varias temporadas y antologías.
