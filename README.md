@@ -13,35 +13,35 @@ La estructura incluye:
 - productoras, distribuidoras, cadenas y plataformas;
 - disponibilidad por territorio, modalidad de acceso y subtítulos;
 - colecciones, temporadas, episodios regulares y especiales;
+- géneros, tropos, temas, tonos y advertencias de contenido;
+- nivel de drama y tipo de final;
 - separación entre información objetiva y futura información personal;
 - pruebas automatizadas y validación continua.
 
-### Relaciones del universo GL
+### Guía de visionado
 
-Un `Credit` conecta una `Person` con una `Series`. Cuando su función es de reparto, también puede indicar qué `Character` interpreta.
+`ViewingGuide` separa dos preguntas que no siempre tienen la misma respuesta:
 
-Las parejas se modelan en dos niveles:
+- `DramaLevel`: cuánto drama contiene el recorrido.
+- `EndingType`: cómo termina la pareja principal.
 
-- `ActingPair` une a dos personas reales que trabajan como pareja artística.
-- `CharacterPairing` une a dos personajes dentro de una serie.
-- `PairingPortrayal` conecta ambas relaciones sin confundirlas.
+Los finales distinguen entre:
 
-Así, FreenBecky es una pareja artística, Sam–Mon es una pareja ficticia y `PairingPortrayal` indica que FreenBecky interpreta a Sam–Mon en *GAP*.
+- `HAPPY_EVER_AFTER`: felices para siempre;
+- `HAPPY_FOR_NOW`: felices por ahora;
+- agridulce, abierto, triste, trágico o todavía desconocido.
 
-La industria y la disponibilidad se modelan por separado:
+La propiedad `is_zero_drama_with_happy_ending` permite aplicar directamente nuestro filtro de confort: **zero drama + final feliz**.
 
-- `Company` representa una empresa.
-- `SeriesCompany` indica si produce, emite o distribuye una serie.
-- `Platform` representa un servicio donde puede verse.
-- `Availability` registra el territorio, modalidad de acceso, enlace oficial y subtítulos.
+La futura interfaz tratará el tipo y la explicación del final como información con spoiler y podrá mantenerlos ocultos hasta que la usuaria decida mostrarlos.
 
-La estructura narrativa diferencia tres niveles:
+### Relaciones principales
 
-- `SeriesCollection` agrupa producciones relacionadas, como una antología.
-- `Season` representa una temporada concreta de una serie.
-- `Episode` pertenece a una temporada y puede ser regular o especial.
-
-Así, *Four Elements* puede agrupar varias series independientes sin tratarlas artificialmente como temporadas.
+- `Credit` conecta personas, personajes y series.
+- `ActingPair`, `CharacterPairing` y `PairingPortrayal` distinguen las parejas reales y ficticias.
+- `Company`, `Platform` y `Availability` describen industria y visionado.
+- `SeriesCollection`, `Season` y `Episode` describen la estructura narrativa.
+- `Tag` y `ContentWarning` ayudan a descubrir una serie adecuada para cada momento.
 
 ## Preparación del entorno
 
@@ -82,4 +82,4 @@ ruff check .
 
 ## Próximo paso
 
-Añadir géneros, tropos, advertencias de contenido y tipo de final para mejorar el descubrimiento de series.
+Añadir fuentes y procedencia para saber de dónde sale cada dato y cuándo fue verificado.
