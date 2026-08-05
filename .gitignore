@@ -9,6 +9,11 @@ __pycache__/
 .venv/
 venv/
 
+# Local databases
+data/*.db
+data/*.db-shm
+data/*.db-wal
+
 # Editors and operating systems
 .vscode/
 .idea/
