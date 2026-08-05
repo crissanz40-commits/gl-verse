@@ -4,26 +4,34 @@ GL Verse será una base de datos conectada del universo de las series GL: produc
 
 ## Estado actual
 
-El dominio ya representa series, personas, personajes, parejas, industria, disponibilidad, estructura narrativa, guía de visionado y procedencia de los datos.
+El dominio representa series, personas, personajes, parejas, industria, disponibilidad, estructura narrativa, guía de visionado y procedencia de los datos.
 
-La primera persistencia real utiliza SQLite e incluye:
+La persistencia utiliza SQLite y migraciones SQL numeradas:
 
-- creación automática de `data/gl_verse.db`;
-- esquema versionado;
-- tabla e índices para series;
-- guardado, recuperación y listado mediante `SeriesRepository`;
-- integridad para identificadores duplicados;
-- pruebas con bases de datos temporales en memoria.
+- `001_initial_schema.sql` crea la tabla e índices de series.
+- `002_seed_gap.sql` añade la primera ficha real: *GAP: The Series*.
+
+Una base nueva ejecuta todas las migraciones en orden. Una base existente ejecuta únicamente las versiones pendientes.
+
+### Primera migración de datos
+
+La migración de GAP guarda:
+
+- identificador estable `gap-2022`;
+- título internacional y título original tailandés;
+- país y año de estreno;
+- estado finalizado;
+- una sinopsis breve.
+
+La inserción es idempotente: puede inicializarse la base varias veces sin duplicar GAP. Si ya existe una ficha con ese identificador, la migración respeta sus datos en lugar de sobrescribirlos.
 
 ### Por qué SQLite
 
-SQLite es gratuito, no necesita servidor y guarda toda la información en un archivo. El archivo local de datos no se sube a GitHub. El esquema y el código para reconstruirlo sí forman parte del repositorio.
-
-Esta primera versión persiste únicamente las series. Las demás entidades se incorporarán mediante nuevas versiones del esquema, manteniendo los cambios pequeños y comprobables.
+SQLite es gratuito, no necesita servidor y guarda toda la información en `data/gl_verse.db`. El archivo local no se sube a GitHub; las migraciones necesarias para reconstruirlo sí.
 
 ### Guía de visionado
 
-`ViewingGuide` separa cuánto drama contiene una historia de cómo termina la pareja principal. La propiedad `is_zero_drama_with_happy_ending` permite aplicar nuestro filtro de confort: **zero drama + final feliz**.
+`ViewingGuide` permite aplicar nuestro filtro de confort: **zero drama + final feliz**.
 
 ### Fuentes y trazabilidad
 
@@ -37,7 +45,7 @@ Necesitas Python 3.11 o posterior.
 python -m venv .venv
 ```
 
-Activa el entorno virtual:
+Activa el entorno virtual e instala el proyecto:
 
 ```bash
 # Windows
@@ -45,18 +53,8 @@ Activa el entorno virtual:
 
 # macOS o Linux
 source .venv/bin/activate
-```
 
-Instala el proyecto con sus herramientas de desarrollo:
-
-```bash
 python -m pip install -e ".[dev]"
-```
-
-## Ejecutar GL Verse
-
-```bash
-gl-verse
 ```
 
 ## Ejecutar las comprobaciones
@@ -68,4 +66,4 @@ ruff check .
 
 ## Próximo paso
 
-Añadir una migración para guardar personas, personajes y créditos en SQLite.
+Crear la migración estructural para personas, personajes y créditos y completar después la ficha relacional de GAP.
