@@ -2,6 +2,27 @@
 
 GL Verse será una base de datos conectada del universo de las series GL: producciones, profesionales, personajes, parejas, plataformas y fuentes, con una capa personal para registrar lo que hemos visto y nuestras valoraciones.
 
+## Prototipo web
+
+La carpeta `web/` contiene una primera experiencia frontal responsive para explorar el universo GL. Incluye:
+
+- búsqueda instantánea por serie, pareja ficticia o pareja artística;
+- selección de plataformas;
+- filtros por drama, tipo de final, pareja y país;
+- modo confort para encontrar títulos **zero dramas + final feliz**;
+- orden por popularidad, química, estreno o nivel de drama;
+- lista personal y fichas emergentes de las parejas.
+
+Los datos de esta primera versión son demostrativos. Más adelante la interfaz consumirá la información validada de SQLite.
+
+Para probarla localmente sin instalar dependencias adicionales:
+
+```bash
+python -m http.server 8000 --directory web
+```
+
+Después abre `http://localhost:8000` en el navegador.
+
 ## Migraciones SQLite
 
 La persistencia utiliza migraciones SQL numeradas:
@@ -70,4 +91,4 @@ ruff check .
 
 ## Próximo paso
 
-Añadir la migración de datos con Freen, Becky, Sam, Mon y sus créditos de reparto en GAP.
+Conectar el prototipo web con una API de lectura basada en SQLite y sustituir los datos de demostración por fichas trazables.
