@@ -8,11 +8,11 @@ El proyecto está creciendo deliberadamente poco a poco. Primero construiremos u
 
 La estructura incluye:
 
-- un paquete Python en `src/gl_verse`;
 - modelos conectados para series, personas, personajes y créditos;
 - parejas artísticas y parejas ficticias como conceptos independientes;
 - productoras, distribuidoras, cadenas y plataformas;
 - disponibilidad por territorio, modalidad de acceso y subtítulos;
+- colecciones, temporadas, episodios regulares y especiales;
 - separación entre información objetiva y futura información personal;
 - pruebas automatizadas y validación continua.
 
@@ -35,7 +35,13 @@ La industria y la disponibilidad se modelan por separado:
 - `Platform` representa un servicio donde puede verse.
 - `Availability` registra el territorio, modalidad de acceso, enlace oficial y subtítulos.
 
-Esto permite expresar que *GAP* fue producida por Idol Factory y está disponible gratis en YouTube para España.
+La estructura narrativa diferencia tres niveles:
+
+- `SeriesCollection` agrupa producciones relacionadas, como una antología.
+- `Season` representa una temporada concreta de una serie.
+- `Episode` pertenece a una temporada y puede ser regular o especial.
+
+Así, *Four Elements* puede agrupar varias series independientes sin tratarlas artificialmente como temporadas.
 
 ## Preparación del entorno
 
@@ -76,4 +82,4 @@ ruff check .
 
 ## Próximo paso
 
-Modelar temporadas y episodios para representar series simples, historias con varias temporadas y antologías.
+Añadir géneros, tropos, advertencias de contenido y tipo de final para mejorar el descubrimiento de series.
