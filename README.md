@@ -10,17 +10,24 @@ La estructura incluye:
 
 - un paquete Python en `src/gl_verse`;
 - modelos conectados para series, personas, personajes y créditos;
+- parejas artísticas y parejas ficticias como conceptos independientes;
 - separación entre información objetiva y futura información personal;
 - un punto de entrada de consola;
 - pruebas automatizadas con pytest;
 - análisis estático con Ruff;
 - validación continua mediante GitHub Actions.
 
-### Primeras relaciones
+### Relaciones del universo GL
 
 Un `Credit` conecta una `Person` con una `Series`. Cuando su función es de reparto, también puede indicar qué `Character` interpreta.
 
-De esta forma, Freen es una persona, Sam es un personaje y su participación en *GAP* es el crédito que relaciona las tres entidades.
+Las parejas se modelan en dos niveles:
+
+- `ActingPair` une a dos personas reales que trabajan como pareja artística.
+- `CharacterPairing` une a dos personajes dentro de una serie.
+- `PairingPortrayal` conecta ambas relaciones sin confundirlas.
+
+Así, FreenBecky es una pareja artística, Sam–Mon es una pareja ficticia y `PairingPortrayal` indica que FreenBecky interpreta a Sam–Mon en *GAP*.
 
 ## Preparación del entorno
 
@@ -61,4 +68,4 @@ ruff check .
 
 ## Próximo paso
 
-Modelar por separado las parejas artísticas formadas por personas y las parejas ficticias formadas por personajes.
+Añadir productoras, plataformas y disponibilidad para empezar a describir dónde nace y dónde puede verse cada serie.
