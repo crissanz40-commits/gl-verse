@@ -22,9 +22,27 @@ class CreditRole(str, Enum):
     PRODUCER = "producer"
 
 
+class PairingRole(str, Enum):
+    """Importancia de una pareja ficticia dentro de una serie."""
+
+    MAIN = "main"
+    SUPPORTING = "supporting"
+
+
 def _require_text(value: str, field_name: str) -> None:
     if not value.strip():
         raise ValueError(f"{field_name} no puede estar vacío")
+
+
+def _require_distinct_pair(values: tuple[str, str], field_name: str) -> None:
+    if len(values) != 2:
+        raise ValueError(f"{field_name} debe contener exactamente dos elementos")
+
+    for value in values:
+        _require_text(value, field_name)
+
+    if values[0] == values[1]:
+        raise ValueError(f"{field_name} debe contener dos elementos distintos")
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,3 +112,48 @@ class Credit:
 
         if self.character_id is not None and self.role is not CreditRole.CAST:
             raise ValueError("Solo un crédito de reparto puede estar asociado a un personaje")
+
+
+@dataclass(frozen=True, slots=True)
+class ActingPair:
+    """Representa una pareja artística formada por dos personas reales."""
+
+    id: str
+    name: str
+    person_ids: tuple[str, str]
+    active_since: int | None = None
+
+    def __post_init__(self) -> None:
+        _require_text(self.id, "El identificador")
+        _require_text(self.name, "El nombre")
+        _require_distinct_pair(self.person_ids, "La pareja artística")
+
+        if self.active_since is not None and self.active_since < 1900:
+            raise ValueError("El año de inicio debe ser igual o posterior a 1900")
+
+
+@dataclass(frozen=True, slots=True)
+class CharacterPairing:
+    """Representa una pareja ficticia formada por dos personajes."""
+
+    id: str
+    series_id: str
+    character_ids: tuple[str, str]
+    role: PairingRole = PairingRole.MAIN
+
+    def __post_init__(self) -> None:
+        _require_text(self.id, "El identificador")
+        _require_text(self.series_id, "El identificador de la serie")
+        _require_distinct_pair(self.character_ids, "La pareja ficticia")
+
+
+@dataclass(frozen=True, slots=True)
+class PairingPortrayal:
+    """Conecta una pareja artística con la pareja ficticia que interpreta."""
+
+    acting_pair_id: str
+    character_pairing_id: str
+
+    def __post_init__(self) -> None:
+        _require_text(self.acting_pair_id, "El identificador de la pareja artística")
+        _require_text(self.character_pairing_id, "El identificador de la pareja ficticia")
