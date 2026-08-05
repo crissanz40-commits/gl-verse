@@ -1,27 +1,14 @@
-"""Conexión e inicialización de la base de datos SQLite."""
+"""Conexión y migraciones de la base de datos SQLite."""
 
 import sqlite3
+from importlib import resources
 from pathlib import Path
 
-SCHEMA_VERSION = 1
-
-_SCHEMA = """
-CREATE TABLE IF NOT EXISTS series (
-    id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    country TEXT NOT NULL,
-    release_year INTEGER NOT NULL CHECK (release_year >= 1900),
-    original_title TEXT,
-    status TEXT NOT NULL CHECK (
-        status IN ('announced', 'airing', 'completed', 'cancelled')
-    ),
-    synopsis TEXT
-);
-
-CREATE INDEX IF NOT EXISTS idx_series_title ON series(title);
-CREATE INDEX IF NOT EXISTS idx_series_country ON series(country);
-CREATE INDEX IF NOT EXISTS idx_series_release_year ON series(release_year);
-"""
+_MIGRATIONS = {
+    1: "001_initial_schema.sql",
+    2: "002_seed_gap.sql",
+}
+SCHEMA_VERSION = max(_MIGRATIONS)
 
 
 def connect_database(path: str | Path = "data/gl_verse.db") -> sqlite3.Connection:
@@ -37,14 +24,46 @@ def connect_database(path: str | Path = "data/gl_verse.db") -> sqlite3.Connectio
     return connection
 
 
-def initialize_database(connection: sqlite3.Connection) -> None:
-    """Crea la versión inicial del esquema si todavía no existe."""
-    connection.executescript(_SCHEMA)
-    connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
-    connection.commit()
+def initialize_database(
+    connection: sqlite3.Connection,
+    target_version: int = SCHEMA_VERSION,
+) -> None:
+    """Aplica en orden las migraciones pendientes hasta la versión indicada."""
+    current_version = get_schema_version(connection)
+
+    if target_version < current_version:
+        raise ValueError("No se puede migrar la base de datos a una versión anterior")
+
+    if target_version > SCHEMA_VERSION:
+        raise ValueError("La versión solicitada todavía no existe")
+
+    for version in range(current_version + 1, target_version + 1):
+        _apply_migration(connection, version)
 
 
 def get_schema_version(connection: sqlite3.Connection) -> int:
     """Devuelve la versión del esquema guardada por SQLite."""
     row = connection.execute("PRAGMA user_version").fetchone()
     return int(row[0])
+
+
+def _apply_migration(connection: sqlite3.Connection, version: int) -> None:
+    migration_name = _MIGRATIONS[version]
+    migration = (
+        resources.files("gl_verse")
+        .joinpath("migrations", migration_name)
+        .read_text(encoding="utf-8")
+    )
+    script = f"""
+    BEGIN IMMEDIATE;
+    {migration}
+    PRAGMA user_version = {version};
+    COMMIT;
+    """
+
+    try:
+        connection.executescript(script)
+    except sqlite3.Error:
+        if connection.in_transaction:
+            connection.rollback()
+        raise
