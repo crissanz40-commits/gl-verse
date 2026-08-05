@@ -1,18 +1,26 @@
 # GL Verse
 
-GL Verse será un catálogo personal de series GL para descubrir historias, registrar lo que hemos visto y guardar nuestras propias valoraciones.
+GL Verse será una base de datos conectada del universo de las series GL: producciones, profesionales, personajes, parejas, plataformas y fuentes, con una capa personal para registrar lo que hemos visto y nuestras valoraciones.
 
-El proyecto está empezando deliberadamente pequeño: primero construiremos una base clara en Python y después decidiremos juntas qué funcionalidades añadir.
+El proyecto está creciendo deliberadamente poco a poco. Primero construiremos un dominio claro en Python y después elegiremos la persistencia y la interfaz.
 
 ## Estado actual
 
-La primera estructura incluye:
+La estructura incluye:
 
 - un paquete Python en `src/gl_verse`;
-- un modelo inicial para representar series;
+- modelos conectados para series, personas, personajes y créditos;
+- separación entre información objetiva y futura información personal;
 - un punto de entrada de consola;
 - pruebas automatizadas con pytest;
-- configuración de formato y análisis con Ruff.
+- análisis estático con Ruff;
+- validación continua mediante GitHub Actions.
+
+### Primeras relaciones
+
+Un `Credit` conecta una `Person` con una `Series`. Cuando su función es de reparto, también puede indicar qué `Character` interpreta.
+
+De esta forma, Freen es una persona, Sam es un personaje y su participación en *GAP* es el crédito que relaciona las tres entidades.
 
 ## Preparación del entorno
 
@@ -53,4 +61,4 @@ ruff check .
 
 ## Próximo paso
 
-Definir qué información queremos guardar de cada serie antes de elegir una base de datos o construir la interfaz.
+Modelar por separado las parejas artísticas formadas por personas y las parejas ficticias formadas por personajes.
