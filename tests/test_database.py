@@ -2,8 +2,12 @@ import sqlite3
 
 import pytest
 
-from gl_verse.database import SCHEMA_VERSION, connect_database, get_schema_version
-from gl_verse.database import initialize_database
+from gl_verse.database import (
+    SCHEMA_VERSION,
+    connect_database,
+    get_schema_version,
+    initialize_database,
+)
 from gl_verse.models import Series, SeriesStatus
 from gl_verse.repositories import SeriesAlreadyExistsError, SeriesRepository
 
