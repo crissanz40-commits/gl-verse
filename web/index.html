@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="GL Verse, descubre series GL por parejas, química, drama y final." />
+    <title>GL Verse — Tu guía del universo GL</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="GL Verse, inicio">
+        <span class="brand-mark" aria-hidden="true">GL</span>
+        <span>VERSE</span>
+      </a>
+      <nav class="main-nav" aria-label="Navegación principal">
+        <a class="active" href="#discover">Descubrir</a>
+        <a href="#popular">Popular</a>
+        <a href="#couples">Parejas</a>
+      </nav>
+      <label class="search" for="search-input">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg>
+        <input id="search-input" type="search" placeholder="Busca una serie, actriz o pareja…" autocomplete="off" />
+        <kbd>⌘ K</kbd>
+      </label>
+      <button class="watchlist-button" type="button" aria-label="Abrir mi lista">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v17l-6-3-6 3V4Z" /></svg>
+        <span>Mi lista</span>
+        <strong id="saved-count">0</strong>
+      </button>
+    </header>
+
+    <main>
+      <section class="hero" id="discover">
+        <div class="hero-glow"></div>
+        <div class="hero-copy">
+          <p class="eyebrow"><span></span> Tu universo GL, bien ordenado</p>
+          <h1>Encuentra tu próxima<br /><em>historia favorita.</em></h1>
+          <p class="hero-description">Series, parejas y dónde verlas. Con el dato que de verdad importa: cuánto drama te espera por el camino.</p>
+          <div class="hero-actions">
+            <button class="primary-button" type="button" data-quick-filter="comfort">
+              <span aria-hidden="true">♡</span> Solo zero dramas
+            </button>
+            <button class="ghost-button" type="button" data-open-featured>Ver ficha de GAP <span>→</span></button>
+          </div>
+          <div class="hero-metrics" aria-label="Resumen del catálogo">
+            <div><strong>128</strong><span>series GL</span></div>
+            <div><strong>74</strong><span>parejas</span></div>
+            <div><strong>9</strong><span>plataformas</span></div>
+          </div>
+        </div>
+        <div class="hero-visual" aria-hidden="true">
+          <div class="orbit orbit-one"></div>
+          <div class="orbit orbit-two"></div>
+          <div class="couple-silhouette"><span>F</span><i>♥</i><span>B</span></div>
+          <div class="floating-card chemistry"><small>QUÍMICA</small><strong>9.6</strong><span>✦ Excelente</span></div>
+          <div class="floating-card ending"><span>☺</span><div><small>FINAL</small><strong>Feliz</strong></div></div>
+          <div class="floating-card pairing"><small>PAREJA PRINCIPAL</small><strong>Sam · Mon</strong><span>FreenBecky</span></div>
+        </div>
+      </section>
+
+      <section class="provider-section" aria-labelledby="providers-title">
+        <div class="section-heading compact">
+          <div><p class="eyebrow">DÓNDE VER</p><h2 id="providers-title">Tus plataformas</h2></div>
+          <p>Selecciona una o varias</p>
+        </div>
+        <div class="provider-list" id="provider-list"></div>
+      </section>
+
+      <section class="catalog" id="popular">
+        <aside class="filters" aria-label="Filtros del catálogo">
+          <div class="filter-title"><div><span>FILTROS GL</span><h2>A tu medida</h2></div><button id="reset-filters" type="button">Limpiar</button></div>
+          <fieldset>
+            <legend>Nivel de drama</legend>
+            <label class="range-label"><span>Suavecito</span><span>Necesito terapia</span></label>
+            <input id="drama-filter" type="range" min="1" max="5" value="5" />
+            <div class="range-value">Hasta <strong id="drama-value">5</strong>/5</div>
+          </fieldset>
+          <fieldset>
+            <legend>Tipo de final</legend>
+            <label class="check-row"><input type="checkbox" name="ending" value="happy" /><span class="fake-check"></span><span>Final feliz</span><b>☺</b></label>
+            <label class="check-row"><input type="checkbox" name="ending" value="open" /><span class="fake-check"></span><span>Final abierto</span><b>◌</b></label>
+            <label class="check-row"><input type="checkbox" name="ending" value="sad" /><span class="fake-check"></span><span>Final triste</span><b>☂</b></label>
+          </fieldset>
+          <fieldset>
+            <legend>Pareja</legend>
+            <label class="check-row"><input type="checkbox" name="pairing" value="main" /><span class="fake-check"></span><span>Principal</span></label>
+            <label class="check-row"><input type="checkbox" name="pairing" value="ensemble" /><span class="fake-check"></span><span>Varias parejas</span></label>
+          </fieldset>
+          <fieldset>
+            <legend>País</legend>
+            <select id="country-filter"><option value="">Todos los países</option><option>Tailandia</option><option>Corea del Sur</option><option>Japón</option><option>Taiwán</option></select>
+          </fieldset>
+          <div class="comfort-box"><span>♡</span><div><strong>Modo confort</strong><p>Final feliz y drama máximo 2.</p></div><button id="comfort-toggle" class="toggle" type="button" role="switch" aria-checked="false"><i></i></button></div>
+        </aside>
+
+        <div class="catalog-content">
+          <div class="section-heading">
+            <div><p class="eyebrow">SELECCIÓN GL VERSE</p><h2>Popular esta semana</h2></div>
+            <div class="sort-control"><span id="result-count">6 títulos</span><select id="sort-select" aria-label="Ordenar catálogo"><option value="popular">Más populares</option><option value="chemistry">Mejor química</option><option value="newest">Más recientes</option><option value="drama">Menos drama</option></select></div>
+          </div>
+          <div class="active-filters" id="active-filters" aria-live="polite"></div>
+          <div class="card-grid" id="series-grid"></div>
+          <div class="empty-state" id="empty-state" hidden><span>♡</span><h3>No hemos encontrado ese match</h3><p>Prueba a quitar algún filtro o buscar otra pareja.</p><button type="button" data-reset>Ver todo el catálogo</button></div>
+        </div>
+      </section>
+    </main>
+
+    <dialog class="detail-dialog" id="detail-dialog">
+      <button class="dialog-close" type="button" aria-label="Cerrar">×</button>
+      <div id="detail-content"></div>
+    </dialog>
+
+    <footer>
+      <a class="brand" href="#"><span class="brand-mark">GL</span><span>VERSE</span></a>
+      <p>Hecho con cariño para encontrar historias que nos hagan bien.</p>
+      <span>Prototipo · Datos de demostración</span>
+    </footer>
+    <script src="app.js"></script>
+  </body>
+</html>
