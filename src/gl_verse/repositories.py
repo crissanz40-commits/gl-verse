@@ -28,9 +28,11 @@ class SeriesRepository:
                         release_year,
                         original_title,
                         status,
-                        synopsis
+                        synopsis,
+                        cover_image_url,
+                        cover_image_source_url
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         series.id,
@@ -40,6 +42,8 @@ class SeriesRepository:
                         series.original_title,
                         series.status.value,
                         series.synopsis,
+                        series.cover_image_url,
+                        series.cover_image_source_url,
                     ),
                 )
         except sqlite3.IntegrityError as error:
@@ -51,7 +55,8 @@ class SeriesRepository:
         """Recupera una serie por su identificador."""
         row = self._connection.execute(
             """
-            SELECT id, title, country, release_year, original_title, status, synopsis
+            SELECT id, title, country, release_year, original_title, status, synopsis,
+                   cover_image_url, cover_image_source_url
             FROM series
             WHERE id = ?
             """,
@@ -64,7 +69,8 @@ class SeriesRepository:
         """Devuelve todas las series ordenadas por título."""
         rows = self._connection.execute(
             """
-            SELECT id, title, country, release_year, original_title, status, synopsis
+            SELECT id, title, country, release_year, original_title, status, synopsis,
+                   cover_image_url, cover_image_source_url
             FROM series
             ORDER BY title COLLATE NOCASE
             """
@@ -82,4 +88,6 @@ class SeriesRepository:
             original_title=row["original_title"],
             status=SeriesStatus(row["status"]),
             synopsis=row["synopsis"],
+            cover_image_url=row["cover_image_url"],
+            cover_image_source_url=row["cover_image_source_url"],
         )
