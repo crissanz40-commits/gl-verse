@@ -23,13 +23,16 @@ def test_gap_is_added_when_database_upgrades_from_version_one(
     connection: sqlite3.Connection,
 ) -> None:
     initialize_database(connection, target_version=1)
-    repository = SeriesRepository(connection)
 
     assert get_schema_version(connection) == 1
-    assert repository.get("gap-2022") is None
+    assert connection.execute(
+        "SELECT COUNT(*) FROM series WHERE id = ?",
+        ("gap-2022",),
+    ).fetchone()[0] == 0
 
     initialize_database(connection)
 
+    repository = SeriesRepository(connection)
     gap = repository.get("gap-2022")
     assert get_schema_version(connection) == SCHEMA_VERSION
     assert gap is not None
