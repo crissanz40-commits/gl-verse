@@ -18,8 +18,8 @@
       </a>
       <nav class="main-nav" aria-label="Navegación principal">
         <a class="active" href="#discover">Descubrir</a>
-        <a href="#popular">Popular</a>
         <a href="#couples">Parejas</a>
+        <a href="#actresses">Actrices</a>
       </nav>
       <label class="search" for="search-input">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg>
@@ -47,9 +47,9 @@
             <button class="ghost-button" type="button" data-open-featured>Ver ficha de GAP <span>→</span></button>
           </div>
           <div class="hero-metrics" aria-label="Resumen del catálogo">
-            <div><strong>128</strong><span>series GL</span></div>
-            <div><strong>74</strong><span>parejas</span></div>
-            <div><strong>9</strong><span>plataformas</span></div>
+            <div><strong id="metric-series">0</strong><span>series GL</span></div>
+            <div><strong id="metric-pairs">0</strong><span>parejas</span></div>
+            <div><strong id="metric-actresses">0</strong><span>actrices</span></div>
           </div>
         </div>
         <div class="hero-visual" aria-hidden="true">
@@ -88,7 +88,7 @@
           <fieldset>
             <legend>Pareja</legend>
             <label class="check-row"><input type="checkbox" name="pairing" value="main" /><span class="fake-check"></span><span>Principal</span></label>
-            <label class="check-row"><input type="checkbox" name="pairing" value="ensemble" /><span class="fake-check"></span><span>Varias parejas</span></label>
+            <label class="check-row"><input type="checkbox" name="pairing" value="supporting" /><span class="fake-check"></span><span>Secundaria</span></label>
           </fieldset>
           <fieldset>
             <legend>País</legend>
@@ -107,6 +107,16 @@
           <div class="empty-state" id="empty-state" hidden><span>♡</span><h3>No hemos encontrado ese match</h3><p>Prueba a quitar algún filtro o buscar otra pareja.</p><button type="button" data-reset>Ver todo el catálogo</button></div>
         </div>
       </section>
+
+      <section class="universe-section" id="couples" aria-labelledby="couples-title">
+        <div class="universe-heading"><div><p class="eyebrow">MÁS ALLÁ DE UNA SERIE</p><h2 id="couples-title">Parejas con historia propia</h2></div><p>Cada ficha reúne sus actrices, personajes y todos los proyectos compartidos.</p></div>
+        <div class="pair-grid" id="pair-grid"></div>
+      </section>
+
+      <section class="universe-section actresses-section" id="actresses" aria-labelledby="actresses-title">
+        <div class="universe-heading"><div><p class="eyebrow">TRAYECTORIAS INDIVIDUALES</p><h2 id="actresses-title">Actrices del universo GL</h2></div><p>Una actriz puede protagonizar, apoyar una historia o aparecer sin pareja.</p></div>
+        <div class="actress-grid" id="actress-grid"></div>
+      </section>
     </main>
 
     <dialog class="detail-dialog" id="detail-dialog">
@@ -117,7 +127,7 @@
     <footer>
       <a class="brand" href="#"><span class="brand-mark">GL</span><span>VERSE</span></a>
       <p>Hecho con cariño para encontrar historias que nos hagan bien.</p>
-      <span>Prototipo · Datos de demostración</span>
+      <span>Prototipo · Estructura preparada para datos trazables</span>
     </footer>
     <script src="app.js"></script>
   </body>
