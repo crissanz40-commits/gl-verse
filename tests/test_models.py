@@ -2,14 +2,14 @@ import pytest
 
 from gl_verse.models import (
     ActingPair,
+    CastImportance,
     Character,
-    CharacterPairing,
     Credit,
     CreditRole,
-    PairingPortrayal,
     PairingRole,
     Person,
     Series,
+    SeriesPairing,
     SeriesStatus,
 )
 
@@ -22,6 +22,8 @@ def test_series_stores_objective_catalog_data() -> None:
         country="Tailandia",
         release_year=2022,
         status=SeriesStatus.COMPLETED,
+        cover_image_url="https://images.example/gap.jpg",
+        cover_image_source_url="https://example.com/gap",
     )
 
     assert series.title == "GAP"
@@ -36,10 +38,12 @@ def test_person_character_and_credit_form_a_cast_relationship() -> None:
         person_id=person.id,
         role=CreditRole.CAST,
         character_id=character.id,
+        cast_importance=CastImportance.LEAD,
     )
 
     assert credit.person_id == "freen-sarocha"
     assert credit.character_id == "sam-gap"
+    assert credit.cast_importance is CastImportance.LEAD
 
 
 def test_non_cast_credit_cannot_reference_a_character() -> None:
@@ -52,31 +56,40 @@ def test_non_cast_credit_cannot_reference_a_character() -> None:
         )
 
 
+def test_non_cast_credit_cannot_have_cast_importance() -> None:
+    with pytest.raises(ValueError, match="importancia"):
+        Credit(
+            series_id="gap-2022",
+            person_id="director-example",
+            role=CreditRole.DIRECTOR,
+            cast_importance=CastImportance.LEAD,
+        )
+
+
 def test_series_rejects_an_empty_identifier() -> None:
     with pytest.raises(ValueError, match="identificador"):
         Series(id="", title="GAP", country="Tailandia", release_year=2022)
 
 
-def test_acting_pair_and_character_pairing_remain_separate_but_connected() -> None:
+def test_acting_pair_is_connected_to_its_work_in_a_series() -> None:
     acting_pair = ActingPair(
         id="freenbecky",
         name="FreenBecky",
         person_ids=("freen-sarocha", "becky-armstrong"),
         active_since=2022,
+        image_url="https://images.example/freenbecky.jpg",
+        image_source_url="https://example.com/freenbecky",
     )
-    character_pairing = CharacterPairing(
+    series_pairing = SeriesPairing(
         id="sam-mon-gap",
         series_id="gap-2022",
+        acting_pair_id=acting_pair.id,
         character_ids=("sam-gap", "mon-gap"),
         role=PairingRole.MAIN,
     )
-    portrayal = PairingPortrayal(
-        acting_pair_id=acting_pair.id,
-        character_pairing_id=character_pairing.id,
-    )
 
-    assert portrayal.acting_pair_id == "freenbecky"
-    assert portrayal.character_pairing_id == "sam-mon-gap"
+    assert series_pairing.acting_pair_id == "freenbecky"
+    assert series_pairing.series_id == "gap-2022"
 
 
 def test_a_pair_cannot_repeat_the_same_member() -> None:
@@ -85,4 +98,13 @@ def test_a_pair_cannot_repeat_the_same_member() -> None:
             id="invalid-pair",
             name="Pareja no válida",
             person_ids=("same-person", "same-person"),
+        )
+
+
+def test_images_require_their_source() -> None:
+    with pytest.raises(ValueError, match="imagen y su fuente"):
+        Person(
+            id="freen-sarocha",
+            name="Sarocha Chankimha",
+            image_url="https://images.example/freen.jpg",
         )

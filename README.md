@@ -30,6 +30,7 @@ La persistencia utiliza migraciones SQL numeradas:
 - `001_initial_schema.sql`: tabla e índices de series.
 - `002_seed_gap.sql`: primera ficha real, *GAP: The Series*.
 - `003_people_characters_credits.sql`: personas, personajes y créditos profesionales.
+- `004_cast_images_and_series_pairings.sql`: imágenes con fuente, importancia del reparto y parejas por serie.
 
 Una base nueva ejecuta todas las migraciones en orden. Una base existente aplica únicamente las versiones pendientes.
 
@@ -45,6 +46,16 @@ La versión 3 garantiza desde SQLite que:
 - al eliminar una serie se eliminan sus personajes y créditos relacionados.
 
 Esto impide combinaciones incoherentes aunque los datos se introduzcan fuera de la aplicación.
+
+La versión 4 añade el modelo necesario para navegar por actrices y parejas:
+
+- cada portada o imagen guarda tanto su URL como la URL de su fuente;
+- una participación de reparto puede ser protagonista, secundaria o invitada;
+- una actriz puede participar en una serie sin formar pareja;
+- una pareja artística une dos actrices sin depender de una serie concreta;
+- `series_pairings` registra cada trabajo compartido, sus personajes y si la pareja es principal o secundaria;
+- la trayectoria conjunta de una pareja se obtiene recorriendo sus participaciones en distintas series;
+- SQLite impide duplicar una pareja invirtiendo el orden de sus integrantes y comprueba que sus personajes coincidan con el reparto real.
 
 ### Primera migración de datos
 

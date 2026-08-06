@@ -22,8 +22,16 @@ class CreditRole(str, Enum):
     PRODUCER = "producer"
 
 
+class CastImportance(str, Enum):
+    """Importancia de una actriz dentro del reparto de una serie."""
+
+    LEAD = "lead"
+    SUPPORTING = "supporting"
+    GUEST = "guest"
+
+
 class PairingRole(str, Enum):
-    """Importancia de una pareja ficticia dentro de una serie."""
+    """Importancia de una pareja dentro de una serie."""
 
     MAIN = "main"
     SUPPORTING = "supporting"
@@ -45,6 +53,19 @@ def _require_distinct_pair(values: tuple[str, str], field_name: str) -> None:
         raise ValueError(f"{field_name} debe contener dos elementos distintos")
 
 
+def _validate_image_reference(
+    image_url: str | None,
+    source_url: str | None,
+    field_name: str,
+) -> None:
+    if (image_url is None) != (source_url is None):
+        raise ValueError(f"{field_name} debe incluir la imagen y su fuente")
+
+    for value in (image_url, source_url):
+        if value is not None and not value.startswith(("https://", "http://")):
+            raise ValueError(f"{field_name} debe usar URLs http:// o https://")
+
+
 @dataclass(frozen=True, slots=True)
 class Series:
     """Representa la información objetiva de una serie GL."""
@@ -56,6 +77,8 @@ class Series:
     original_title: str | None = None
     status: SeriesStatus = SeriesStatus.ANNOUNCED
     synopsis: str | None = None
+    cover_image_url: str | None = None
+    cover_image_source_url: str | None = None
 
     def __post_init__(self) -> None:
         _require_text(self.id, "El identificador")
@@ -64,6 +87,12 @@ class Series:
 
         if self.release_year < 1900:
             raise ValueError("El año de estreno debe ser igual o posterior a 1900")
+
+        _validate_image_reference(
+            self.cover_image_url,
+            self.cover_image_source_url,
+            "La portada",
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,10 +103,13 @@ class Person:
     name: str
     stage_name: str | None = None
     nationality: str | None = None
+    image_url: str | None = None
+    image_source_url: str | None = None
 
     def __post_init__(self) -> None:
         _require_text(self.id, "El identificador")
         _require_text(self.name, "El nombre")
+        _validate_image_reference(self.image_url, self.image_source_url, "La imagen")
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,6 +134,7 @@ class Credit:
     person_id: str
     role: CreditRole
     character_id: str | None = None
+    cast_importance: CastImportance | None = None
 
     def __post_init__(self) -> None:
         _require_text(self.series_id, "El identificador de la serie")
@@ -113,6 +146,9 @@ class Credit:
         if self.character_id is not None and self.role is not CreditRole.CAST:
             raise ValueError("Solo un crédito de reparto puede estar asociado a un personaje")
 
+        if self.cast_importance is not None and self.role is not CreditRole.CAST:
+            raise ValueError("Solo un crédito de reparto puede indicar importancia en el reparto")
+
 
 @dataclass(frozen=True, slots=True)
 class ActingPair:
@@ -122,6 +158,8 @@ class ActingPair:
     name: str
     person_ids: tuple[str, str]
     active_since: int | None = None
+    image_url: str | None = None
+    image_source_url: str | None = None
 
     def __post_init__(self) -> None:
         _require_text(self.id, "El identificador")
@@ -131,29 +169,21 @@ class ActingPair:
         if self.active_since is not None and self.active_since < 1900:
             raise ValueError("El año de inicio debe ser igual o posterior a 1900")
 
+        _validate_image_reference(self.image_url, self.image_source_url, "La imagen")
+
 
 @dataclass(frozen=True, slots=True)
-class CharacterPairing:
-    """Representa una pareja ficticia formada por dos personajes."""
+class SeriesPairing:
+    """Representa el trabajo de una pareja artística dentro de una serie."""
 
     id: str
     series_id: str
+    acting_pair_id: str
     character_ids: tuple[str, str]
     role: PairingRole = PairingRole.MAIN
 
     def __post_init__(self) -> None:
         _require_text(self.id, "El identificador")
         _require_text(self.series_id, "El identificador de la serie")
-        _require_distinct_pair(self.character_ids, "La pareja ficticia")
-
-
-@dataclass(frozen=True, slots=True)
-class PairingPortrayal:
-    """Conecta una pareja artística con la pareja ficticia que interpreta."""
-
-    acting_pair_id: str
-    character_pairing_id: str
-
-    def __post_init__(self) -> None:
         _require_text(self.acting_pair_id, "El identificador de la pareja artística")
-        _require_text(self.character_pairing_id, "El identificador de la pareja ficticia")
+        _require_distinct_pair(self.character_ids, "La pareja ficticia")
