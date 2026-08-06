@@ -36,6 +36,8 @@ def test_series_can_be_saved_and_recovered(connection: sqlite3.Connection) -> No
         release_year=2022,
         status=SeriesStatus.COMPLETED,
         synopsis="Sam y Mon descubren que su relación puede cambiar sus vidas.",
+        cover_image_url="https://images.example/gap.jpg",
+        cover_image_source_url="https://example.com/gap",
     )
 
     repository.add(expected)
