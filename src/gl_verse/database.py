@@ -8,6 +8,7 @@ _MIGRATIONS = {
     1: "001_initial_schema.sql",
     2: "002_seed_gap.sql",
     3: "003_people_characters_credits.sql",
+    4: "004_cast_images_and_series_pairings.sql",
 }
 SCHEMA_VERSION = max(_MIGRATIONS)
 
