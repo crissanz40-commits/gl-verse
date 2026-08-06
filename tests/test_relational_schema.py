@@ -37,7 +37,7 @@ def test_version_two_database_upgrades_without_losing_gap() -> None:
 
     initialize_database(connection)
 
-    assert get_schema_version(connection) == 3
+    assert get_schema_version(connection) == 4
     assert connection.execute(
         "SELECT title FROM series WHERE id = ?",
         ("gap-2022",),
