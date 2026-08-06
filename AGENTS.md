@@ -1,42 +1,42 @@
-# Repository guidance
+# Guía de trabajo del repositorio
 
-## Scope
+## Alcance
 
-These instructions apply to the entire repository.
+Estas instrucciones se aplican a todo el repositorio.
 
-## Project conventions
+## Convenciones del proyecto
 
-- GL Verse targets Python 3.11 or later and uses the `src/` layout.
-- Keep objective catalogue data separate from personal viewing data.
-- Preserve the distinction between series, people, characters, credits, fictional pairings, and artistic pairings.
-- Treat `web/` as a static prototype until the repository introduces an API explicitly.
+- GL Verse utiliza Python 3.11 o posterior y organiza el código dentro de `src/`.
+- Mantén separados los datos objetivos del catálogo y los datos personales de visionado.
+- Conserva la distinción entre series, personas, personajes, créditos, parejas ficticias y parejas artísticas.
+- Trata `web/` como un prototipo estático hasta que el repositorio incorpore una API de forma explícita.
 
-## Changes
+## Cómo realizar cambios
 
-- Inspect the existing domain model, repositories, migrations, and tests before changing behavior.
-- Prefer small, focused changes that follow the current structure and naming.
-- For SQLite schema or seed changes, add the next numbered migration. Do not rewrite migrations already in use.
-- Keep migrations idempotent where appropriate and preserve database constraints and existing data.
-- Use stable identifiers, avoid duplicates, and record traceable sources for real GL data. Do not invent facts.
-- Do not commit local databases, virtual environments, generated files, or unrelated changes.
-- Add or update tests whenever behavior, persistence, or data-loading rules change.
+- Revisa el modelo de dominio, los repositorios, las migraciones y las pruebas existentes antes de modificar el comportamiento.
+- Haz cambios pequeños y centrados, respetando la estructura y los nombres actuales.
+- Para modificar el esquema de SQLite o cargar datos iniciales, añade la siguiente migración numerada. No reescribas migraciones que ya estén en uso.
+- Cuando corresponda, las migraciones deben poder ejecutarse más de una vez sin duplicar datos ni producir errores. Conserva las restricciones de la base de datos y los datos existentes.
+- Usa identificadores estables, evita duplicados y registra fuentes comprobables para los datos reales de series GL. No inventes información.
+- No subas bases de datos locales, entornos virtuales, archivos generados ni cambios ajenos a la tarea.
+- Añade o actualiza pruebas cuando cambie el comportamiento, la persistencia o la forma de cargar datos.
 
-## Validation
+## Comprobaciones
 
-Install development dependencies with:
+Instala las dependencias de desarrollo con:
 
 ```bash
 python -m pip install -e ".[dev]"
 ```
 
-Before opening or updating a pull request, run:
+Antes de abrir o actualizar un pull request, ejecuta:
 
 ```bash
 pytest
 ruff check .
 ```
 
-For JavaScript changes, also run:
+Si modificas JavaScript, ejecuta también:
 
 ```bash
 node --check web/app.js
@@ -44,4 +44,4 @@ node --check web/app.js
 
 ## Pull requests
 
-Keep each pull request focused. Explain model or migration decisions, identify any data sources added, and report the checks executed.
+Mantén cada pull request centrado en una sola tarea. Explica las decisiones sobre el modelo o las migraciones, indica las fuentes de datos añadidas y deja constancia de las comprobaciones ejecutadas.
