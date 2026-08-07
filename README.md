@@ -11,7 +11,10 @@ La carpeta `web/` contiene una primera experiencia frontal responsive para explo
 - filtros por drama, tipo de final, pareja y país;
 - modo confort para encontrar títulos **zero dramas + final feliz**;
 - orden por popularidad, química, estreno o nivel de drama;
-- lista personal y fichas emergentes de las parejas.
+- lista personal y fichas navegables de series, parejas y actrices;
+- trayectoria conjunta de cada pareja a través de sus series;
+- trayectoria individual de cada actriz, incluidas participaciones sin pareja;
+- espacios de portada e imagen preparados para mostrar su URL y fuente.
 
 Los datos de esta primera versión son demostrativos. Más adelante la interfaz consumirá la información validada de SQLite.
 

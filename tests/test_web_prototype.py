@@ -17,5 +17,21 @@ def test_web_prototype_exposes_gl_discovery_controls() -> None:
     assert 'id="provider-list"' in html
     assert 'id="comfort-toggle"' in html
     assert 'id="series-grid"' in html
+    assert 'id="pair-grid"' in html
+    assert 'id="actress-grid"' in html
+    assert 'id="detail-dialog"' in html
     assert 'src="app.js"' in html
     assert 'href="styles.css"' in html
+
+
+def test_web_prototype_keeps_series_actresses_and_pairs_separate() -> None:
+    javascript = (WEB_ROOT / "app.js").read_text(encoding="utf-8")
+
+    assert "const actresses = [" in javascript
+    assert "const actingPairs = [" in javascript
+    assert "const seriesPairings = [" in javascript
+    assert "const series = [" in javascript
+    assert 'showDetail("series"' in javascript
+    assert 'data-open="pair:' in javascript
+    assert 'data-open="actress:' in javascript
+    assert "Sin pareja en esta serie" in javascript
