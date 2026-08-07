@@ -94,13 +94,20 @@
             <legend>País</legend>
             <select id="country-filter"><option value="">Todos los países</option><option>Tailandia</option><option>Corea del Sur</option><option>Japón</option><option>Taiwán</option></select>
           </fieldset>
+          <fieldset>
+            <legend>Estreno</legend>
+            <div class="release-filters">
+              <select id="release-month-filter" aria-label="Filtrar por mes de estreno"><option value="">Todos los meses</option></select>
+              <select id="release-year-filter" aria-label="Filtrar por año de estreno"><option value="">Todos los años</option></select>
+            </div>
+          </fieldset>
           <div class="comfort-box"><span>♡</span><div><strong>Modo confort</strong><p>Final feliz y drama máximo 2.</p></div><button id="comfort-toggle" class="toggle" type="button" role="switch" aria-checked="false"><i></i></button></div>
         </aside>
 
         <div class="catalog-content">
           <div class="section-heading">
             <div><p class="eyebrow">SELECCIÓN GL VERSE</p><h2>Popular esta semana</h2></div>
-            <div class="sort-control"><span id="result-count">6 títulos</span><select id="sort-select" aria-label="Ordenar catálogo"><option value="popular">Más populares</option><option value="chemistry">Mejor química</option><option value="newest">Más recientes</option><option value="drama">Menos drama</option></select></div>
+            <div class="sort-control"><span id="result-count">6 títulos</span><select id="sort-select" aria-label="Ordenar catálogo"><option value="popular">Más populares</option><option value="score">Mejor nota</option><option value="newest">Más recientes</option><option value="drama">Menos drama</option></select></div>
           </div>
           <div class="active-filters" id="active-filters" aria-live="polite"></div>
           <div class="card-grid" id="series-grid"></div>

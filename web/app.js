@@ -30,12 +30,12 @@ const seriesPairings = [
 ];
 
 const series = [
-  { id: "gap", title: "GAP: The Series", year: 2022, country: "Tailandia", ending: "happy", drama: 2, chemistry: 9.6, popularity: 100, provider: "YouTube", initials: "GM", colors: ["#62224f", "#da6296"], coverImageUrl: "https://upload.wikimedia.org/wikipedia/en/a/a1/Gaptheseriesposter.png", coverImageSourceUrl: "https://en.wikipedia.org/wiki/Gap_(TV_series)", synopsis: "Mon empieza a trabajar en la empresa de Sam, a quien admira desde joven. La distancia entre sus mundos se convierte poco a poco en una historia de amor.", cast: [{ actressId: "freen", character: "Sam", importance: "lead" }, { actressId: "becky", character: "Mon", importance: "lead" }] },
-  { id: "loyal-pin", title: "The Loyal Pin", year: 2024, country: "Tailandia", ending: "happy", drama: 3, chemistry: 9.5, popularity: 94, provider: "YouTube", initials: "AP", colors: ["#774626", "#d7a75a"], coverImageUrl: "https://upload.wikimedia.org/wikipedia/en/4/44/TheLoyalPin.jpg", coverImageSourceUrl: "https://en.wikipedia.org/wiki/The_Loyal_Pin", synopsis: "Una historia de época sobre dos jóvenes unidas desde la infancia que deben proteger un amor enfrentado a las expectativas de palacio.", cast: [{ actressId: "freen", character: "Anin", importance: "lead" }, { actressId: "becky", character: "Pin", importance: "lead" }] },
-  { id: "pluto", title: "Pluto", year: 2024, country: "Tailandia", ending: "happy", drama: 4, chemistry: 9.4, popularity: 97, provider: "YouTube", initials: "AM", colors: ["#152950", "#7954a6"], coverImageUrl: "https://upload.wikimedia.org/wikipedia/en/d/d7/Pluto_2024_Official_Poster.png", coverImageSourceUrl: "https://en.wikipedia.org/wiki/Pluto_(Thai_TV_series)", synopsis: "Una identidad prestada y un vínculo inesperado abren un misterio romántico donde cada verdad cambia lo que creemos saber de la pareja.", cast: [{ actressId: "namtan", character: "Ai-oon", importance: "lead" }, { actressId: "film", character: "May", importance: "lead" }] },
-  { id: "23-5", title: "23.5", year: 2024, country: "Tailandia", ending: "happy", drama: 1, chemistry: 8.9, popularity: 88, provider: "Netflix", initials: "OS", colors: ["#db744f", "#f5b766"], coverImageUrl: "https://upload.wikimedia.org/wikipedia/en/9/96/23.5_Official_Poster_%282024%29.jpg", coverImageSourceUrl: "https://en.wikipedia.org/wiki/23.5", synopsis: "Ongsa, tímida y enamorada, conoce online a la popular Sun bajo un nombre que oculta quién es. Una comedia romántica luminosa y juvenil.", cast: [{ actressId: "milk", character: "Ongsa", importance: "lead" }, { actressId: "love", character: "Sun", importance: "lead" }, { actressId: "ciize", character: "Alpha", importance: "supporting" }] },
-  { id: "secret-of-us", title: "The Secret of Us", year: 2024, country: "Tailandia", ending: "happy", drama: 4, chemistry: 9.3, popularity: 96, provider: "Ch3+", initials: "LE", colors: ["#315a5b", "#8bb596"], coverImageUrl: "https://upload.wikimedia.org/wikipedia/en/9/9a/The_Secret_of_Us_poster_%282024%29.jpeg", coverImageSourceUrl: "https://en.wikipedia.org/wiki/The_Secret_of_Us_(TV_series)", synopsis: "Dos antiguas amantes vuelven a encontrarse cuando sus vidas profesionales se cruzan, obligándolas a mirar de frente una ruptura nunca resuelta.", cast: [{ actressId: "lingling", character: "Lada", importance: "lead" }, { actressId: "orm", character: "Earn", importance: "lead" }] },
-  { id: "affair", title: "Affair", year: 2024, country: "Tailandia", ending: "happy", drama: 5, chemistry: 9.2, popularity: 90, provider: "iQIYI", initials: "WP", colors: ["#682936", "#bf6a6f"], coverImageUrl: "https://upload.wikimedia.org/wikipedia/en/8/88/Affair_2024_Official_Poster.jpg", coverImageSourceUrl: "https://en.wikipedia.org/wiki/Affair_(Thai_Drama)", synopsis: "La amistad inseparable entre Wan y Pleng se transforma en algo más profundo mientras el tiempo, la familia y sus decisiones ponen a prueba el vínculo.", cast: [{ actressId: "lookmhee", character: "Wan", importance: "lead" }, { actressId: "sonya", character: "Pleng", importance: "lead" }] },
+  { id: "gap", title: "GAP: The Series", year: 2022, releaseDate: "2022-11-19", releaseDateSourceUrl: "https://en.wikipedia.org/wiki/Gap_(TV_series)", country: "Tailandia", ending: "happy", drama: 2, chemistry: 9.6, popularity: 100, provider: "YouTube", initials: "GM", colors: ["#62224f", "#da6296"], coverImageUrl: "https://upload.wikimedia.org/wikipedia/en/a/a1/Gaptheseriesposter.png", coverImageSourceUrl: "https://en.wikipedia.org/wiki/Gap_(TV_series)", synopsis: "Mon empieza a trabajar en la empresa de Sam, a quien admira desde joven. La distancia entre sus mundos se convierte poco a poco en una historia de amor.", cast: [{ actressId: "freen", character: "Sam", importance: "lead" }, { actressId: "becky", character: "Mon", importance: "lead" }] },
+  { id: "loyal-pin", title: "The Loyal Pin", year: 2024, releaseDate: "2024-08-04", releaseDateSourceUrl: "https://en.wikipedia.org/wiki/The_Loyal_Pin", country: "Tailandia", ending: "happy", drama: 3, chemistry: 9.5, popularity: 94, provider: "YouTube", initials: "AP", colors: ["#774626", "#d7a75a"], coverImageUrl: "https://upload.wikimedia.org/wikipedia/en/4/44/TheLoyalPin.jpg", coverImageSourceUrl: "https://en.wikipedia.org/wiki/The_Loyal_Pin", synopsis: "Una historia de época sobre dos jóvenes unidas desde la infancia que deben proteger un amor enfrentado a las expectativas de palacio.", cast: [{ actressId: "freen", character: "Anin", importance: "lead" }, { actressId: "becky", character: "Pin", importance: "lead" }] },
+  { id: "pluto", title: "Pluto", year: 2024, releaseDate: "2024-10-19", releaseDateSourceUrl: "https://en.wikipedia.org/wiki/Pluto_(Thai_TV_series)", country: "Tailandia", ending: "happy", drama: 4, chemistry: 9.4, popularity: 97, provider: "YouTube", initials: "AM", colors: ["#152950", "#7954a6"], coverImageUrl: "https://upload.wikimedia.org/wikipedia/en/d/d7/Pluto_2024_Official_Poster.png", coverImageSourceUrl: "https://en.wikipedia.org/wiki/Pluto_(Thai_TV_series)", synopsis: "Una identidad prestada y un vínculo inesperado abren un misterio romántico donde cada verdad cambia lo que creemos saber de la pareja.", cast: [{ actressId: "namtan", character: "Ai-oon", importance: "lead" }, { actressId: "film", character: "May", importance: "lead" }] },
+  { id: "23-5", title: "23.5", year: 2024, releaseDate: "2024-03-08", releaseDateSourceUrl: "https://en.wikipedia.org/wiki/23.5", country: "Tailandia", ending: "happy", drama: 1, chemistry: 8.9, popularity: 88, provider: "Netflix", initials: "OS", colors: ["#db744f", "#f5b766"], coverImageUrl: "https://upload.wikimedia.org/wikipedia/en/9/96/23.5_Official_Poster_%282024%29.jpg", coverImageSourceUrl: "https://en.wikipedia.org/wiki/23.5", synopsis: "Ongsa, tímida y enamorada, conoce online a la popular Sun bajo un nombre que oculta quién es. Una comedia romántica luminosa y juvenil.", cast: [{ actressId: "milk", character: "Ongsa", importance: "lead" }, { actressId: "love", character: "Sun", importance: "lead" }, { actressId: "ciize", character: "Alpha", importance: "supporting" }] },
+  { id: "secret-of-us", title: "The Secret of Us", year: 2024, releaseDate: "2024-06-24", releaseDateSourceUrl: "https://en.wikipedia.org/wiki/The_Secret_of_Us_(TV_series)", country: "Tailandia", ending: "happy", drama: 4, chemistry: 9.3, popularity: 96, provider: "Ch3+", initials: "LE", colors: ["#315a5b", "#8bb596"], coverImageUrl: "https://upload.wikimedia.org/wikipedia/en/9/9a/The_Secret_of_Us_poster_%282024%29.jpeg", coverImageSourceUrl: "https://en.wikipedia.org/wiki/The_Secret_of_Us_(TV_series)", synopsis: "Dos antiguas amantes vuelven a encontrarse cuando sus vidas profesionales se cruzan, obligándolas a mirar de frente una ruptura nunca resuelta.", cast: [{ actressId: "lingling", character: "Lada", importance: "lead" }, { actressId: "orm", character: "Earn", importance: "lead" }] },
+  { id: "affair", title: "Affair", year: 2024, releaseDate: "2024-08-30", releaseDateSourceUrl: "https://en.wikipedia.org/wiki/Affair_(Thai_Drama)", country: "Tailandia", ending: "happy", drama: 5, chemistry: 9.2, popularity: 90, provider: "iQIYI", initials: "WP", colors: ["#682936", "#bf6a6f"], coverImageUrl: "https://upload.wikimedia.org/wikipedia/en/8/88/Affair_2024_Official_Poster.jpg", coverImageSourceUrl: "https://en.wikipedia.org/wiki/Affair_(Thai_Drama)", synopsis: "La amistad inseparable entre Wan y Pleng se transforma en algo más profundo mientras el tiempo, la familia y sus decisiones ponen a prueba el vínculo.", cast: [{ actressId: "lookmhee", character: "Wan", importance: "lead" }, { actressId: "sonya", character: "Pleng", importance: "lead" }] },
 ];
 
 const providers = [
@@ -48,7 +48,8 @@ const providers = [
 
 const importanceLabels = { lead: "Protagonista", supporting: "Secundaria", guest: "Invitada" };
 const roleLabels = { main: "Pareja principal", supporting: "Pareja secundaria" };
-const state = { search: "", provider: "Todas", drama: 5, endings: [], pairings: [], country: "", comfort: false, sort: "popular", saved: new Set(), detailTrail: [] };
+const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+const state = { search: "", provider: "Todas", drama: 5, endings: [], pairings: [], country: "", releaseMonth: "", releaseYear: "", comfort: false, sort: "popular", saved: new Set(), detailTrail: [] };
 const grid = document.querySelector("#series-grid");
 const resultCount = document.querySelector("#result-count");
 const activeFilters = document.querySelector("#active-filters");
@@ -60,6 +61,17 @@ const pairingsForSeries = (seriesId) => seriesPairings.filter((pairing) => pairi
 const pairHistory = (pairId) => seriesPairings.filter((pairing) => pairing.pairId === pairId);
 const actressCredits = (actressId) => series.flatMap((item) => item.cast.filter((credit) => credit.actressId === actressId).map((credit) => ({ ...credit, series: item })));
 const pairsForActress = (actressId) => actingPairs.filter((pair) => pair.actressIds.includes(actressId));
+const releaseParts = (item) => item.releaseDate.split("-");
+
+function formatReleaseDate(releaseDate) {
+  const [year, month, day] = releaseDate.split("-");
+  return `${Number(day)} ${monthNames[Number(month) - 1].toLocaleLowerCase("es")} ${year}`;
+}
+
+function avatarMarkup(actress, large = false) {
+  const image = actress.imageUrl ? `<img src="${actress.imageUrl}" alt="" loading="lazy" />` : "";
+  return `<span class="cast-avatar${large ? " large" : ""}" style="--media-start:${actress.colors[0]};--media-end:${actress.colors[1]}"><span aria-hidden="true">${actress.initials}</span>${image}</span>`;
+}
 
 function mediaMarkup(item, kind, label, showSource = true) {
   const imageUrl = kind === "cover" ? item.coverImageUrl : item.imageUrl;
@@ -85,22 +97,32 @@ function renderProviders() {
     </button>`).join("");
 }
 
+function renderReleaseFilters() {
+  const months = [...new Set(series.map((item) => Number(releaseParts(item)[1])))].sort((a, b) => a - b);
+  const years = [...new Set(series.map((item) => releaseParts(item)[0]))].sort((a, b) => b.localeCompare(a));
+  document.querySelector("#release-month-filter").innerHTML = `<option value="">Todos los meses</option>${months.map((month) => `<option value="${month}">${monthNames[month - 1]}</option>`).join("")}`;
+  document.querySelector("#release-year-filter").innerHTML = `<option value="">Todos los años</option>${years.map((year) => `<option value="${year}">${year}</option>`).join("")}`;
+}
+
 function visibleSeries() {
   const term = state.search.toLocaleLowerCase("es");
   return series.filter((item) => {
     const actressNames = item.cast.map((credit) => byId(actresses, credit.actressId)?.stageName).join(" ");
     const searchable = `${item.title} ${pairingSummary(item)} ${actressNames}`.toLocaleLowerCase("es");
     const roles = pairingsForSeries(item.id).map((pairing) => pairing.role);
+    const [releaseYear, releaseMonth] = releaseParts(item);
     return (!term || searchable.includes(term))
       && (state.provider === "Todas" || item.provider === state.provider)
       && item.drama <= state.drama
       && (!state.endings.length || state.endings.includes(item.ending))
       && (!state.pairings.length || state.pairings.some((role) => roles.includes(role)))
       && (!state.country || item.country === state.country)
+      && (!state.releaseMonth || releaseMonth === state.releaseMonth.padStart(2, "0"))
+      && (!state.releaseYear || releaseYear === state.releaseYear)
       && (!state.comfort || (item.ending === "happy" && item.drama <= 2));
   }).sort((a, b) => {
-    if (state.sort === "chemistry") return b.chemistry - a.chemistry;
-    if (state.sort === "newest") return b.year - a.year;
+    if (state.sort === "score") return b.chemistry - a.chemistry;
+    if (state.sort === "newest") return b.releaseDate.localeCompare(a.releaseDate);
     if (state.sort === "drama") return a.drama - b.drama;
     return b.popularity - a.popularity;
   });
@@ -116,7 +138,7 @@ function renderCards() {
         <div class="poster-top"><span class="rank">#${index + 1}</span><button class="save-button ${state.saved.has(item.id) ? "saved" : ""}" type="button" data-save="${item.id}" aria-label="Guardar ${item.title}">${state.saved.has(item.id) ? "♥" : "♡"}</button></div>
         <div class="poster-title"><small>${item.country.toUpperCase()} · ${item.year}</small><strong>${item.title}</strong></div>
       </div>
-      <div class="card-info"><h3>${item.title}</h3><span class="card-meta">${item.year} · ${item.provider} · Drama ${item.drama}/5</span><div class="pair-row"><span class="pair-name">♡ ${pairingSummary(item)}</span><span class="badges"><span class="badge happy">☺ FELIZ</span><span class="badge drama">✦ ${item.chemistry}</span></span></div></div>
+      <div class="card-info"><h3>${item.title}</h3><span class="card-meta">${formatReleaseDate(item.releaseDate)} · ${item.provider} · Drama ${item.drama}/5</span><div class="pair-row"><span class="pair-name">♡ ${pairingSummary(item)}</span><span class="badges"><span class="badge happy">☺ FELIZ</span><span class="badge drama">✦ ${item.chemistry}</span></span></div></div>
     </article>`).join("");
   emptyState.hidden = items.length > 0;
   renderActiveFilters();
@@ -151,6 +173,8 @@ function renderActiveFilters() {
   state.endings.forEach((value) => chips.push([value === "happy" ? "Final feliz" : `Final ${value}`, `ending:${value}`]));
   state.pairings.forEach((value) => chips.push([roleLabels[value], `pairing:${value}`]));
   if (state.country) chips.push([state.country, "country"]);
+  if (state.releaseMonth) chips.push([monthNames[Number(state.releaseMonth) - 1], "releaseMonth"]);
+  if (state.releaseYear) chips.push([`Estreno ${state.releaseYear}`, "releaseYear"]);
   activeFilters.innerHTML = chips.map(([label, key]) => `<button class="filter-chip" type="button" data-remove-filter="${key}">${label}</button>`).join("");
 }
 
@@ -172,14 +196,14 @@ function seriesDetail(item) {
     const paired = pairings.find((seriesPairing) => byId(actingPairs, seriesPairing.pairId).actressIds.includes(actress.id));
     const status = paired ? byId(actingPairs, paired.pairId).name : "Sin pareja en esta serie";
     return `<button class="cast-row" type="button" data-open="actress:${actress.id}">
-      <span class="cast-avatar" style="--media-start:${actress.colors[0]};--media-end:${actress.colors[1]}">${actress.initials}</span>
+      ${avatarMarkup(actress)}
       <span><strong>${actress.stageName}</strong><small>${credit.character} · ${importanceLabels[credit.importance]}</small></span><em>${status} →</em>
     </button>`;
   }).join("");
   return `${detailHeader("Ficha de serie")}
     <div class="detail-layout series-layout">
       <aside>${mediaMarkup(item, "cover", `Portada de ${item.title}`)}</aside>
-      <div class="detail-main"><p class="eyebrow">${item.country.toUpperCase()} · ${item.year}</p><h2>${item.title}</h2><p class="detail-lead">${item.synopsis}</p>
+      <div class="detail-main"><p class="eyebrow">${item.country.toUpperCase()} · ${formatReleaseDate(item.releaseDate).toUpperCase()}</p><h2>${item.title}</h2><p class="detail-lead">${item.synopsis}</p><a class="release-source" href="${item.releaseDateSourceUrl}" target="_blank" rel="noreferrer">Fuente de la fecha de estreno ↗</a>
         <div class="score-strip"><span><small>QUÍMICA</small><strong>✦ ${item.chemistry}</strong></span><span><small>DRAMA</small><strong>${item.drama}/5</strong></span><span><small>FINAL</small><strong>☺ Feliz</strong></span><span><small>DÓNDE VER</small><strong>${item.provider}</strong></span></div>
         <section class="detail-section"><p class="section-kicker">PAREJAS DE LA SERIE</p><div class="relation-grid">${pairCards}</div></section>
         <section class="detail-section"><p class="section-kicker">REPARTO GL</p><div class="cast-list">${castCards}</div></section>
@@ -193,7 +217,7 @@ function pairDetail(pair) {
     const item = byId(series, seriesPairing.seriesId);
     return `<button class="history-row" type="button" data-open="series:${item.id}"><span class="history-year">${item.year}</span><span><strong>${item.title}</strong><small>${seriesPairing.characters.join(" · ")} · ${roleLabels[seriesPairing.role]}</small></span><em>Ver serie →</em></button>`;
   }).join("");
-  const memberCards = members.map((actress) => `<button class="member-card" type="button" data-open="actress:${actress.id}"><span class="cast-avatar large" style="--media-start:${actress.colors[0]};--media-end:${actress.colors[1]}">${actress.initials}</span><span><small>ACTRIZ</small><strong>${actress.stageName}</strong><em>${actress.name}</em></span><b>→</b></button>`).join("");
+  const memberCards = members.map((actress) => `<button class="member-card" type="button" data-open="actress:${actress.id}">${avatarMarkup(actress, true)}<span><small>ACTRIZ</small><strong>${actress.stageName}</strong><em>${actress.name}</em></span><b>→</b></button>`).join("");
   return `${detailHeader("Ficha de pareja")}
     <div class="detail-layout pair-layout"><aside>${mediaMarkup(pair, "pair", `Imagen de ${pair.name}`)}</aside><div class="detail-main"><p class="eyebrow">PAREJA ARTÍSTICA</p><h2>${pair.name}</h2><p class="detail-lead">Una pareja independiente de sus personajes. Su historia se construye con cada serie en la que trabajan juntas.</p>
       <div class="member-grid">${memberCards}</div>
@@ -231,11 +255,13 @@ function showDetail(type, id, push = true) {
 }
 
 function resetFilters() {
-  Object.assign(state, { search: "", provider: "Todas", drama: 5, endings: [], pairings: [], country: "", comfort: false, sort: "popular" });
+  Object.assign(state, { search: "", provider: "Todas", drama: 5, endings: [], pairings: [], country: "", releaseMonth: "", releaseYear: "", comfort: false, sort: "popular" });
   document.querySelector("#search-input").value = "";
   document.querySelector("#drama-filter").value = 5;
   document.querySelector("#drama-value").textContent = 5;
   document.querySelector("#country-filter").value = "";
+  document.querySelector("#release-month-filter").value = "";
+  document.querySelector("#release-year-filter").value = "";
   document.querySelector("#sort-select").value = "popular";
   document.querySelectorAll(".filters input[type=checkbox]").forEach((input) => { input.checked = false; });
   document.querySelector("#comfort-toggle").setAttribute("aria-checked", "false");
@@ -254,11 +280,11 @@ document.addEventListener("click", (event) => {
   if (event.target.closest("[data-quick-filter=comfort]")) { state.comfort = true; document.querySelector("#comfort-toggle").setAttribute("aria-checked", "true"); renderCards(); document.querySelector("#popular").scrollIntoView(); }
   if (event.target.closest("[data-reset]")) resetFilters();
   const remove = event.target.closest("[data-remove-filter]");
-  if (remove) { const [type, value] = remove.dataset.removeFilter.split(":"); if (type === "search") { state.search = ""; document.querySelector("#search-input").value = ""; } if (type === "provider") { state.provider = "Todas"; renderProviders(); } if (type === "drama") { state.drama = 5; document.querySelector("#drama-filter").value = 5; document.querySelector("#drama-value").textContent = 5; } if (type === "comfort") { state.comfort = false; document.querySelector("#comfort-toggle").setAttribute("aria-checked", "false"); } if (type === "ending") state.endings = state.endings.filter((ending) => ending !== value); if (type === "pairing") state.pairings = state.pairings.filter((role) => role !== value); if (type === "country") { state.country = ""; document.querySelector("#country-filter").value = ""; } renderCards(); }
+  if (remove) { const [type, value] = remove.dataset.removeFilter.split(":"); if (type === "search") { state.search = ""; document.querySelector("#search-input").value = ""; } if (type === "provider") { state.provider = "Todas"; renderProviders(); } if (type === "drama") { state.drama = 5; document.querySelector("#drama-filter").value = 5; document.querySelector("#drama-value").textContent = 5; } if (type === "comfort") { state.comfort = false; document.querySelector("#comfort-toggle").setAttribute("aria-checked", "false"); } if (type === "ending") state.endings = state.endings.filter((ending) => ending !== value); if (type === "pairing") state.pairings = state.pairings.filter((role) => role !== value); if (type === "country") { state.country = ""; document.querySelector("#country-filter").value = ""; } if (type === "releaseMonth") { state.releaseMonth = ""; document.querySelector("#release-month-filter").value = ""; } if (type === "releaseYear") { state.releaseYear = ""; document.querySelector("#release-year-filter").value = ""; } renderCards(); }
 });
 
 document.addEventListener("error", (event) => {
-  if (event.target.matches(".entity-media img, .poster > img")) event.target.remove();
+  if (event.target.matches(".entity-media img, .poster > img, .cast-avatar img")) event.target.remove();
 }, true);
 
 document.querySelector("#search-input").addEventListener("input", (event) => { state.search = event.target.value.trim(); renderCards(); });
@@ -266,6 +292,8 @@ document.querySelector("#drama-filter").addEventListener("input", (event) => { s
 document.querySelectorAll("input[name=ending]").forEach((input) => input.addEventListener("change", () => { state.endings = [...document.querySelectorAll("input[name=ending]:checked")].map((item) => item.value); renderCards(); }));
 document.querySelectorAll("input[name=pairing]").forEach((input) => input.addEventListener("change", () => { state.pairings = [...document.querySelectorAll("input[name=pairing]:checked")].map((item) => item.value); renderCards(); }));
 document.querySelector("#country-filter").addEventListener("change", (event) => { state.country = event.target.value; renderCards(); });
+document.querySelector("#release-month-filter").addEventListener("change", (event) => { state.releaseMonth = event.target.value; renderCards(); });
+document.querySelector("#release-year-filter").addEventListener("change", (event) => { state.releaseYear = event.target.value; renderCards(); });
 document.querySelector("#sort-select").addEventListener("change", (event) => { state.sort = event.target.value; renderCards(); });
 document.querySelector("#comfort-toggle").addEventListener("click", (event) => { state.comfort = event.currentTarget.getAttribute("aria-checked") !== "true"; event.currentTarget.setAttribute("aria-checked", String(state.comfort)); renderCards(); });
 document.querySelector("#reset-filters").addEventListener("click", resetFilters);
@@ -274,5 +302,6 @@ dialog.addEventListener("click", (event) => { if (event.target === dialog) { sta
 document.addEventListener("keydown", (event) => { if ((event.metaKey || event.ctrlKey) && event.key === "k") { event.preventDefault(); document.querySelector("#search-input").focus(); } if (event.key === "Enter" && event.target.matches("[data-open]") && event.target.getAttribute("role") === "button") { const [type, id] = event.target.dataset.open.split(":"); showDetail(type, id); } });
 
 renderProviders();
+renderReleaseFilters();
 renderCards();
 renderUniverse();
