@@ -19,6 +19,9 @@ def test_web_prototype_exposes_gl_discovery_controls() -> None:
     assert 'id="series-grid"' in html
     assert 'id="pair-grid"' in html
     assert 'id="actress-grid"' in html
+    assert 'id="release-month-filter"' in html
+    assert 'id="release-year-filter"' in html
+    assert '<option value="score">Mejor nota</option>' in html
     assert 'id="detail-dialog"' in html
     assert 'src="app.js"' in html
     assert 'href="styles.css"' in html
@@ -46,3 +49,20 @@ def test_web_prototype_has_traceable_images_for_all_actresses_and_series() -> No
     assert "www.gmm-tv.com/artists/view/24/" in javascript
     assert "www.change2561.com/changeartist" in javascript
     assert ".entity-media img, .poster > img" in javascript
+
+
+def test_web_prototype_filters_real_release_dates_and_uses_cast_thumbnails() -> None:
+    javascript = (WEB_ROOT / "app.js").read_text(encoding="utf-8")
+
+    assert javascript.count('releaseDate: "') == 6
+    assert javascript.count('releaseDateSourceUrl: "https://') == 6
+    assert 'releaseDate: "2022-11-19"' in javascript
+    assert 'releaseDate: "2024-03-08"' in javascript
+    assert 'releaseDate: "2024-06-24"' in javascript
+    assert 'releaseDate: "2024-08-04"' in javascript
+    assert 'releaseDate: "2024-08-30"' in javascript
+    assert 'releaseDate: "2024-10-19"' in javascript
+    assert "function renderReleaseFilters()" in javascript
+    assert 'state.sort === "score"' in javascript
+    assert "function avatarMarkup(actress" in javascript
+    assert ".cast-avatar img" in javascript
