@@ -35,3 +35,14 @@ def test_web_prototype_keeps_series_actresses_and_pairs_separate() -> None:
     assert 'data-open="pair:' in javascript
     assert 'data-open="actress:' in javascript
     assert "Sin pareja en esta serie" in javascript
+
+
+def test_web_prototype_has_traceable_images_for_all_actresses_and_series() -> None:
+    javascript = (WEB_ROOT / "app.js").read_text(encoding="utf-8")
+
+    assert javascript.count('imageSourceUrl: "https://') == 11
+    assert javascript.count('coverImageSourceUrl: "https://') == 6
+    assert "commons.wikimedia.org/wiki/File:" in javascript
+    assert "www.gmm-tv.com/artists/view/24/" in javascript
+    assert "www.change2561.com/changeartist" in javascript
+    assert ".entity-media img, .poster > img" in javascript
