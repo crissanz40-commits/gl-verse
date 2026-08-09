@@ -66,3 +66,12 @@ def test_web_prototype_filters_real_release_dates_and_uses_cast_thumbnails() -> 
     assert 'state.sort === "score"' in javascript
     assert "function avatarMarkup(actress" in javascript
     assert ".cast-avatar img" in javascript
+
+
+def test_web_prototype_uses_verified_current_actress_names_and_roles() -> None:
+    javascript = (WEB_ROOT / "app.js").read_text(encoding="utf-8")
+
+    assert 'name: "Rutricha Phapakithi", stageName: "Ciize"' in javascript
+    assert 'name: "Sirilak Kwong", stageName: "Lingling"' in javascript
+    assert 'actressId: "freen", character: "Pin"' in javascript
+    assert 'actressId: "becky", character: "Anin"' in javascript

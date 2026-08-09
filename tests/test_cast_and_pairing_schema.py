@@ -9,6 +9,12 @@ from gl_verse.database import connect_database, get_schema_version, initialize_d
 def connection():
     database = connect_database(":memory:")
     initialize_database(database)
+    database.execute("DELETE FROM series_pairings")
+    database.execute("DELETE FROM credits")
+    database.execute("DELETE FROM characters")
+    database.execute("DELETE FROM acting_pairs")
+    database.execute("DELETE FROM people")
+    database.commit()
     yield database
     database.close()
 
@@ -95,7 +101,7 @@ def test_version_three_upgrades_without_losing_gap() -> None:
 
     initialize_database(connection)
 
-    assert get_schema_version(connection) == 4
+    assert get_schema_version(connection) == 5
     gap = connection.execute(
         "SELECT title, cover_image_url FROM series WHERE id = 'gap-2022'"
     ).fetchone()
