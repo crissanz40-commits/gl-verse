@@ -10,6 +10,7 @@ _MIGRATIONS = {
     3: "003_people_characters_credits.sql",
     4: "004_cast_images_and_series_pairings.sql",
     5: "005_seed_current_catalog.sql",
+    6: "006_catalog_import_provenance.sql",
 }
 SCHEMA_VERSION = max(_MIGRATIONS)
 

@@ -17,7 +17,7 @@ def test_version_four_upgrades_with_the_complete_current_catalog(connection) -> 
 
     initialize_database(connection)
 
-    assert get_schema_version(connection) == 5
+    assert get_schema_version(connection) == 6
     titles = connection.execute(
         "SELECT title FROM series ORDER BY title COLLATE NOCASE"
     ).fetchall()

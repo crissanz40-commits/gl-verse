@@ -35,6 +35,7 @@ La persistencia utiliza migraciones SQL numeradas:
 - `003_people_characters_credits.sql`: personas, personajes y créditos profesionales.
 - `004_cast_images_and_series_pairings.sql`: imágenes con fuente, importancia del reparto y parejas por serie.
 - `005_seed_current_catalog.sql`: consolida las seis fichas visibles, sus actrices, personajes y parejas artísticas.
+- `006_catalog_import_provenance.sql`: fuentes y comprobaciones utilizadas por el importador de catálogo.
 
 Una base nueva ejecuta todas las migraciones en orden. Una base existente aplica únicamente las versiones pendientes.
 
@@ -62,6 +63,26 @@ La versión 4 añade el modelo necesario para navegar por actrices y parejas:
 - SQLite impide duplicar una pareja invirtiendo el orden de sus integrantes y comprueba que sus personajes coincidan con el reparto real.
 
 La versión 5 lleva a SQLite las fichas que ya aparecen en el prototipo: *GAP*, *The Loyal Pin*, *Pluto*, *23.5*, *The Secret of Us* y *Affair*. La carga reutiliza actrices y parejas compartidas, conserva registros existentes y puede inicializarse de nuevo sin duplicar relaciones.
+
+## Importar nuevas series sin modificar el código
+
+Las ampliaciones del catálogo se preparan como JSON y se incorporan directamente a SQLite. El formato admite series, personas, personajes, créditos, parejas artísticas, trabajos compartidos y las fuentes que respaldan cada campo. La especificación completa está en [`docs/catalog-import-format.md`](docs/catalog-import-format.md).
+
+Primero conviene simular la carga completa:
+
+```bash
+gl-verse importar-series nueva-serie.json --dry-run
+```
+
+Si no aparecen conflictos, se guarda con:
+
+```bash
+gl-verse importar-series nueva-serie.json
+```
+
+Por defecto se utiliza `data/gl_verse.db`; otra base puede indicarse con `--database ruta.db`. Repetir el mismo archivo no duplica registros. Si un identificador existente contiene información distinta o se detecta otra ficha con el mismo título o nombre, toda la operación se cancela sin guardar cambios parciales.
+
+El JSON utilizado para una carga puede ser temporal: las fuentes y su fecha de comprobación quedan persistidas en SQLite. La base local y los archivos generados no deben subirse al repositorio.
 
 ### Primera migración de datos
 

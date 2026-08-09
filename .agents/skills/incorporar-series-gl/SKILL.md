@@ -1,6 +1,6 @@
 ---
 name: incorporar-series-gl
-description: Investigar e incorporar series GL en GL Verse con datos contrastados, trazabilidad, prevención de duplicados y carga mediante el mecanismo real del repositorio. Usar cuando se pida añadir, completar o actualizar una o varias series, su reparto, personajes, parejas, disponibilidad, episodios u otros datos relacionados, y preparar los cambios en un pull request revisable.
+description: Investigar e incorporar series GL en GL Verse con datos contrastados, trazabilidad, prevención de duplicados y el importador JSON del proyecto. Usar cuando se pida añadir, completar o actualizar una o varias series, su reparto, personajes, parejas, disponibilidad, episodios u otros datos relacionados; preparar un cambio de código solo si el modelo no permite guardar la información solicitada.
 ---
 
 # Incorporar series GL
@@ -20,7 +20,7 @@ Antes de investigar o editar:
 3. Identificar el mecanismo vigente de carga de datos y los comandos de comprobación.
 4. Seguir siempre el estado real del repositorio aunque haya cambiado respecto a estas instrucciones.
 
-Actualmente, GL Verse utiliza migraciones SQL numeradas en `src/gl_verse/migrations/`, registradas en `src/gl_verse/database.py`. No asumir que seguirá siendo así: comprobarlo en cada ejecución.
+Actualmente, GL Verse utiliza `gl-verse importar-series` para ampliar el catálogo y reserva las migraciones SQL para cambios de esquema y datos iniciales. No asumir que seguirá siendo así: comprobarlo en cada ejecución.
 
 ### 2. Delimitar la petición
 
@@ -60,10 +60,13 @@ Antes de crear cualquier entidad:
 ### 6. Generar la carga
 
 - Utilizar el mecanismo de carga vigente; no inventar rutas, formatos, comandos ni tecnología.
-- Si siguen utilizándose migraciones SQL, añadir la siguiente migración numerada y registrarla en el ejecutor existente.
-- Hacer la carga segura frente a duplicados y ejecuciones repetidas cuando corresponda.
-- Conservar los datos previos y comprobar la actualización desde la versión anterior.
-- Incluir en la carga o en el mecanismo de trazabilidad las fuentes realmente consultadas.
+- Si está disponible `gl-verse importar-series`, leer `docs/catalog-import-format.md` y generar un JSON temporal con las entidades, fuentes y registros de trazabilidad confirmados.
+- No guardar el JSON temporal ni la base SQLite en el repositorio.
+- Ejecutar primero `gl-verse importar-series <archivo> --dry-run` contra la base de destino.
+- Resolver cualquier conflicto de identificadores o posible duplicado; no forzar ni sobrescribir datos.
+- Tras una simulación correcta, ejecutar `gl-verse importar-series <archivo>` para guardar la carga cuando la petición autorice incorporarla.
+- Si se necesita otra base, indicar explícitamente `--database <ruta>` tanto en la simulación como en la carga real.
+- Usar una migración numerada solo cuando sea necesario cambiar el esquema o cargar datos imprescindibles para reconstruir una instalación nueva.
 
 ### 7. Probar los cambios
 
@@ -85,10 +88,9 @@ ruff check .
 
 No declarar una comprobación como superada si no se ha ejecutado.
 
-### 8. Preparar el pull request
+### 8. Entregar el resultado
 
-- Trabajar en una rama dedicada y mantener el cambio centrado en las series solicitadas.
+- Para una importación ordinaria, no crear una rama ni un pull request: resumir las entidades añadidas, las fuentes consultadas y el resultado del importador.
+- Si hubo que cambiar código o esquema, trabajar en una rama dedicada y preparar un pull request revisable, en borrador salvo indicación contraria.
 - No mezclar refactorizaciones ni cambios funcionales ajenos a la carga.
-- Preparar un pull request revisable, en borrador salvo indicación contraria.
-- Resumir los datos añadidos, las decisiones de modelado, la estrategia contra duplicados, las fuentes consultadas y las comprobaciones ejecutadas.
 - Señalar expresamente cualquier dato omitido, dudoso o pendiente de decisión.
