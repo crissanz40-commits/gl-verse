@@ -60,12 +60,17 @@ class ImportSummary:
     """Resultado cuantificado de una importación."""
 
     inserted: dict[str, int]
+    updated: dict[str, int]
     unchanged: dict[str, int]
     dry_run: bool = False
 
     @property
     def inserted_total(self) -> int:
         return sum(self.inserted.values())
+
+    @property
+    def updated_total(self) -> int:
+        return sum(self.updated.values())
 
     @property
     def unchanged_total(self) -> int:
@@ -155,6 +160,7 @@ def import_catalog(
 
     initialize_database(connection)
     inserted = {name: 0 for name in _SECTION_NAMES}
+    updated = {name: 0 for name in _SECTION_NAMES}
     unchanged = {name: 0 for name in _SECTION_NAMES}
 
     connection.execute("BEGIN IMMEDIATE")
@@ -162,7 +168,7 @@ def import_catalog(
         _reject_database_duplicates(connection, document)
         _validate_references(connection, document)
         _import_sources(connection, document.sources, inserted, unchanged)
-        _import_series(connection, document.series, inserted, unchanged)
+        _import_series(connection, document.series, inserted, updated, unchanged)
         _import_people(connection, document.people, inserted, unchanged)
         _import_characters(connection, document.characters, inserted, unchanged)
         _import_credits(connection, document.credits, inserted, unchanged)
@@ -179,7 +185,12 @@ def import_catalog(
             raise
         raise CatalogImportError(f"SQLite rechazó la importación: {error}") from error
 
-    return ImportSummary(inserted=inserted, unchanged=unchanged, dry_run=dry_run)
+    return ImportSummary(
+        inserted=inserted,
+        updated=updated,
+        unchanged=unchanged,
+        dry_run=dry_run,
+    )
 
 
 _SECTION_NAMES = (
@@ -556,6 +567,8 @@ def _insert_or_compare(
     values: tuple[Any, ...],
     inserted: dict[str, int],
     unchanged: dict[str, int],
+    updated: dict[str, int] | None = None,
+    enrichable_columns: tuple[str, ...] = (),
 ) -> None:
     value_by_column = dict(zip(columns, values, strict=True))
     where = " AND ".join(f"{column} = ?" for column in key_columns)
@@ -564,10 +577,33 @@ def _insert_or_compare(
         f"SELECT {', '.join(columns)} FROM {table} WHERE {where}", key_values
     ).fetchone()
     if row is not None:
-        existing = tuple(row[column] for column in columns)
-        if existing != values:
+        merged = []
+        changed_columns = []
+        for column, incoming in zip(columns, values, strict=True):
+            existing = row[column]
+            if existing == incoming or (column in enrichable_columns and incoming is None):
+                merged.append(existing)
+                continue
+            if column in enrichable_columns and existing is None:
+                merged.append(incoming)
+                changed_columns.append(column)
+                continue
+
             key = ", ".join(f"{name}={value!r}" for name, value in zip(key_columns, key_values))
             raise CatalogConflictError(f"Conflicto en {table} ({key})")
+
+        if changed_columns:
+            assignments = ", ".join(f"{column} = ?" for column in changed_columns)
+            merged_by_column = dict(zip(columns, merged, strict=True))
+            connection.execute(
+                f"UPDATE {table} SET {assignments} WHERE {where}",
+                (*[merged_by_column[column] for column in changed_columns], *key_values),
+            )
+            if updated is None:
+                raise RuntimeError("La importación no configuró el contador de actualizaciones")
+            updated[section] += 1
+            return
+
         _record_result(section, False, inserted, unchanged)
         return
 
@@ -578,7 +614,7 @@ def _insert_or_compare(
     _record_result(section, True, inserted, unchanged)
 
 
-def _import_series(connection, entities, inserted, unchanged) -> None:
+def _import_series(connection, entities, inserted, updated, unchanged) -> None:
     columns = (
         "id",
         "title",
@@ -593,12 +629,6 @@ def _import_series(connection, entities, inserted, unchanged) -> None:
     )
     for item in entities:
         release_date = item.release_date.isoformat() if item.release_date else None
-        if release_date is None:
-            stored = connection.execute(
-                "SELECT release_date FROM series WHERE id = ?", (item.id,)
-            ).fetchone()
-            if stored is not None:
-                release_date = stored["release_date"]
         _insert_or_compare(
             connection,
             table="series",
@@ -619,6 +649,14 @@ def _import_series(connection, entities, inserted, unchanged) -> None:
             ),
             inserted=inserted,
             unchanged=unchanged,
+            updated=updated,
+            enrichable_columns=(
+                "release_date",
+                "original_title",
+                "synopsis",
+                "cover_image_url",
+                "cover_image_source_url",
+            ),
         )
 
 

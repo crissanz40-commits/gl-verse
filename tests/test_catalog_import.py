@@ -174,6 +174,63 @@ def test_legacy_import_without_release_date_remains_idempotent(connection, catal
     assert summary.unchanged_total == 11
 
 
+def test_import_enriches_empty_optional_series_fields(connection, catalog_data) -> None:
+    basic = {
+        **catalog_data,
+        "series": [
+            {
+                "id": "sample-series-2026",
+                "title": "Sample Series",
+                "country": "Tailandia",
+                "release_year": 2026,
+                "status": "announced",
+            }
+        ],
+        "people": [],
+        "characters": [],
+        "credits": [],
+        "acting_pairs": [],
+        "series_pairings": [],
+        "sources": [],
+        "provenance": [],
+    }
+    import_catalog(connection, parse_catalog(basic))
+
+    summary = import_catalog(connection, parse_catalog(catalog_data))
+
+    assert summary.updated == {
+        "series": 1,
+        "people": 0,
+        "characters": 0,
+        "credits": 0,
+        "acting_pairs": 0,
+        "series_pairings": 0,
+        "sources": 0,
+        "provenance": 0,
+    }
+    row = connection.execute(
+        "SELECT release_date, synopsis, cover_image_url FROM series WHERE id = ?",
+        ("sample-series-2026",),
+    ).fetchone()
+    assert tuple(row) == (
+        "2026-03-09",
+        "Una ficha utilizada para probar el importador.",
+        "https://images.example/sample.jpg",
+    )
+
+    repeated = import_catalog(connection, parse_catalog(catalog_data))
+    assert repeated.updated_total == 0
+    assert repeated.unchanged_total == 11
+
+
+def test_import_rejects_overwriting_enriched_series_fields(connection, catalog_data) -> None:
+    import_catalog(connection, parse_catalog(catalog_data))
+    catalog_data["series"][0]["synopsis"] = "Una sinopsis contradictoria."
+
+    with pytest.raises(CatalogConflictError, match="series"):
+        import_catalog(connection, parse_catalog(catalog_data))
+
+
 def test_conflict_rolls_back_the_whole_import(connection, catalog_data) -> None:
     document = parse_catalog(catalog_data)
     import_catalog(connection, document)
