@@ -24,12 +24,14 @@ def catalog_payload(connection: sqlite3.Connection) -> dict[str, list[dict[str, 
     actresses = _actresses(connection)
     pairs = _acting_pairs(connection)
     pairings = _series_pairings(connection)
-    series = _series(connection)
+    platforms = _platforms(connection)
+    series = _series(connection, _availability_by_series(connection))
     return {
         "series": series,
         "actresses": actresses,
         "actingPairs": pairs,
         "seriesPairings": pairings,
+        "platforms": platforms,
     }
 
 
@@ -103,7 +105,59 @@ def _series_pairings(connection: sqlite3.Connection) -> list[dict[str, Any]]:
     ]
 
 
-def _series(connection: sqlite3.Connection) -> list[dict[str, Any]]:
+def _platforms(connection: sqlite3.Connection) -> list[dict[str, Any]]:
+    rows = connection.execute(
+        "SELECT id, name, website_url FROM platforms ORDER BY name COLLATE NOCASE"
+    ).fetchall()
+    return [
+        {"id": row["id"], "name": row["name"], "websiteUrl": row["website_url"]}
+        for row in rows
+    ]
+
+
+def _availability_by_series(
+    connection: sqlite3.Connection,
+) -> dict[str, list[dict[str, Any]]]:
+    rows = connection.execute(
+        """
+        SELECT availability.series_id, availability.platform_id, platform.name AS platform_name,
+               availability.territory, availability.access_model, availability.official_url,
+               subtitle.language AS subtitle_language
+        FROM availability
+        JOIN platforms AS platform ON platform.id = availability.platform_id
+        LEFT JOIN availability_subtitles AS subtitle
+          ON subtitle.series_id = availability.series_id
+         AND subtitle.platform_id = availability.platform_id
+         AND subtitle.territory = availability.territory
+        ORDER BY availability.series_id, platform.name COLLATE NOCASE,
+                 availability.territory, subtitle.language COLLATE NOCASE
+        """
+    ).fetchall()
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    entries: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for row in rows:
+        key = (row["series_id"], row["platform_id"], row["territory"])
+        entry = entries.get(key)
+        if entry is None:
+            entry = {
+                "platformId": row["platform_id"],
+                "platformName": row["platform_name"],
+                "territory": row["territory"],
+                "accessModel": row["access_model"],
+                "officialUrl": row["official_url"],
+                "subtitleLanguages": [],
+            }
+            entries[key] = entry
+            grouped.setdefault(row["series_id"], []).append(entry)
+        if row["subtitle_language"] is not None:
+            entry["subtitleLanguages"].append(row["subtitle_language"])
+    return grouped
+
+
+def _series(
+    connection: sqlite3.Connection,
+    availability_by_series: dict[str, list[dict[str, Any]]],
+) -> list[dict[str, Any]]:
     rows = connection.execute(
         """
         SELECT series.id, series.title, series.country, series.release_year,
@@ -171,6 +225,7 @@ def _series(connection: sqlite3.Connection) -> list[dict[str, Any]]:
             "coverImageSourceUrl": row["cover_image_source_url"],
             "synopsis": row["synopsis"] or "Sinopsis pendiente de verificar.",
             "cast": credits_by_series.get(row["id"], []),
+            "availability": availability_by_series.get(row["id"], []),
         }
         for row in rows
     ]

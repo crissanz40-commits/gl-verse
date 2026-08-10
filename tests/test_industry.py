@@ -67,3 +67,14 @@ def test_availability_rejects_duplicate_subtitle_languages() -> None:
             official_url="https://www.youtube.com/gap",
             subtitle_languages=("es", "es"),
         )
+
+
+def test_availability_rejects_an_ambiguous_territory() -> None:
+    with pytest.raises(ValueError, match="territorio"):
+        Availability(
+            series_id="gap-2022",
+            platform_id="youtube",
+            territory="España",
+            access_model=AccessModel.FREE,
+            official_url="https://www.youtube.com/gap",
+        )

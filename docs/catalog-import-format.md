@@ -1,6 +1,6 @@
 # Formato de importación del catálogo
 
-El documento debe ser JSON UTF-8, declarar `format_version: 1` y utilizar únicamente las secciones necesarias. Los identificadores son estables. Una ejecución posterior puede completar campos opcionales que todavía estén vacíos en una serie, persona o pareja artística, pero nunca sustituir un valor ya guardado. Omitir un campo opcional conserva su valor actual.
+El documento debe ser JSON UTF-8, declarar `format_version: 1` y utilizar únicamente las secciones necesarias. Los identificadores son estables. Una ejecución posterior puede completar campos opcionales que todavía estén vacíos en una serie, persona, pareja artística o plataforma, pero nunca sustituir un valor ya guardado. Omitir un campo opcional conserva su valor actual; en una disponibilidad existente, los idiomas de subtítulos se amplían de forma aditiva.
 
 ```json
 {
@@ -17,6 +17,23 @@ El documento debe ser JSON UTF-8, declarar `format_version: 1` y utilizar única
       "synopsis": "Sinopsis contrastada",
       "cover_image_url": "https://example.com/cover.jpg",
       "cover_image_source_url": "https://example.com/official-page"
+    }
+  ],
+  "platforms": [
+    {
+      "id": "example-stream",
+      "name": "Example Stream",
+      "website_url": "https://stream.example.com"
+    }
+  ],
+  "availability": [
+    {
+      "series_id": "identificador-serie-2026",
+      "platform_id": "example-stream",
+      "territory": "ES",
+      "access_model": "subscription",
+      "official_url": "https://stream.example.com/serie-2026",
+      "subtitle_languages": ["es", "en"]
     }
   ],
   "sources": [
@@ -51,10 +68,14 @@ El documento debe ser JSON UTF-8, declarar `format_version: 1` y utilizar única
 | `credits` | `series_id`, `person_id`, `role` | `character_id`, `cast_importance` |
 | `acting_pairs` | `id`, `name`, `person_ids` | `active_since`, `image_url`, `image_source_url` |
 | `series_pairings` | `id`, `series_id`, `acting_pair_id`, `character_ids`, `role` | — |
+| `platforms` | `id`, `name` | `website_url` |
+| `availability` | `series_id`, `platform_id`, `territory`, `access_model`, `official_url` | `subtitle_languages` |
 | `sources` | `id`, `title`, `url`, `source_type` | `publisher`, `published_on` |
 | `provenance` | `source_id`, `entity_type`, `entity_id`, `field_name`, `checked_on`, `status` | `note` |
 
 `person_ids` y `character_ids` contienen exactamente dos identificadores. Las imágenes siempre deben incluir tanto su URL directa como la página que acredita su procedencia.
+
+Cada disponibilidad es única por serie, plataforma y territorio. `territory` usa `GLOBAL` o un código ISO de país de dos letras en mayúsculas, por ejemplo `ES`, `TH` o `US`. Una carga posterior puede añadir idiomas de subtítulos, pero cambiar el modelo de acceso o la URL oficial de una disponibilidad existente se considera un conflicto. Para su trazabilidad, `provenance.entity_id` se forma como `series_id:platform_id:territory`.
 
 ## Valores permitidos
 
@@ -62,6 +83,7 @@ El documento debe ser JSON UTF-8, declarar `format_version: 1` y utilizar única
 - `credits.role`: `cast`, `director`, `writer`, `producer`.
 - `credits.cast_importance`: `lead`, `supporting`, `guest`.
 - `series_pairings.role`: `main`, `supporting`.
+- `availability.access_model`: `free`, `subscription`, `rental`, `purchase`.
 - `sources.source_type`: `official`, `platform`, `press`, `interview`, `database`, `community`.
 - `provenance.status`: `verified`, `corroborated`, `unverified`, `conflicting`.
 - Fechas: formato ISO `YYYY-MM-DD`.

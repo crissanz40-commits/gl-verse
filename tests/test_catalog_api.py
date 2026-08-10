@@ -22,7 +22,51 @@ def test_catalog_payload_preserves_series_people_and_pairing_relationships() -> 
     gap_pairing = next(item for item in payload["seriesPairings"] if item["seriesId"] == "gap-2022")
     assert gap_pairing["pairId"] == "freenbecky"
     assert set(gap_pairing["characters"]) == {"Sam", "Mon"}
+    assert payload["platforms"] == []
+    assert gap["availability"] == []
 
+    connection.close()
+
+
+def test_catalog_payload_exposes_availability_by_territory() -> None:
+    connection = connect_database(":memory:")
+    initialize_database(connection)
+    connection.execute(
+        "INSERT INTO platforms (id, name, website_url) VALUES (?, ?, ?)",
+        ("youtube", "YouTube", "https://www.youtube.com"),
+    )
+    connection.execute(
+        """
+        INSERT INTO availability (series_id, platform_id, territory, access_model, official_url)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        ("gap-2022", "youtube", "ES", "free", "https://www.youtube.com/example"),
+    )
+    connection.execute(
+        """
+        INSERT INTO availability_subtitles (series_id, platform_id, territory, language)
+        VALUES (?, ?, ?, ?)
+        """,
+        ("gap-2022", "youtube", "ES", "es"),
+    )
+    connection.commit()
+
+    payload = catalog_payload(connection)
+
+    assert payload["platforms"] == [
+        {"id": "youtube", "name": "YouTube", "websiteUrl": "https://www.youtube.com"}
+    ]
+    gap = next(item for item in payload["series"] if item["id"] == "gap-2022")
+    assert gap["availability"] == [
+        {
+            "platformId": "youtube",
+            "platformName": "YouTube",
+            "territory": "ES",
+            "accessModel": "free",
+            "officialUrl": "https://www.youtube.com/example",
+            "subtitleLanguages": ["es"],
+        }
+    ]
     connection.close()
 
 

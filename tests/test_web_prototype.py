@@ -18,6 +18,7 @@ def test_web_prototype_exposes_catalog_controls() -> None:
     assert 'id="actress-grid"' in html
     assert 'id="release-month-filter"' in html
     assert 'id="release-year-filter"' in html
+    assert 'id="provider-list"' in html
     assert 'value="score" disabled' in html
     assert 'id="detail-dialog"' in html
     assert 'src="app.js"' in html
@@ -32,6 +33,9 @@ def test_web_prototype_loads_relational_catalog_from_api() -> None:
     assert "actingPairs = payload.actingPairs" in javascript
     assert "seriesPairings = payload.seriesPairings" in javascript
     assert "series = payload.series" in javascript
+    assert "...payload.platforms.map" in javascript
+    assert "item.availability.some" in javascript
+    assert 'class="availability-row"' in javascript
     assert 'showDetail("series"' in javascript
     assert 'data-open="pair:' in javascript
     assert 'data-open="actress:' in javascript
