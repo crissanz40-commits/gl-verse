@@ -1,6 +1,6 @@
 # Formato de importación del catálogo
 
-El documento debe ser JSON UTF-8, declarar `format_version: 1` y utilizar únicamente las secciones necesarias. Los identificadores son estables. Una ejecución posterior puede completar campos opcionales que todavía estén vacíos en una serie, pero nunca sustituir un valor ya guardado. Omitir un campo opcional conserva su valor actual.
+El documento debe ser JSON UTF-8, declarar `format_version: 1` y utilizar únicamente las secciones necesarias. Los identificadores son estables. Una ejecución posterior puede completar campos opcionales que todavía estén vacíos en una serie, persona o pareja artística, pero nunca sustituir un valor ya guardado. Omitir un campo opcional conserva su valor actual.
 
 ```json
 {

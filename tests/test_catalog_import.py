@@ -231,6 +231,82 @@ def test_import_rejects_overwriting_enriched_series_fields(connection, catalog_d
         import_catalog(connection, parse_catalog(catalog_data))
 
 
+def test_import_enriches_empty_optional_person_and_pair_fields(connection, catalog_data) -> None:
+    basic = {
+        **catalog_data,
+        "people": [
+            {"id": person["id"], "name": person["name"]}
+            for person in catalog_data["people"]
+        ],
+        "acting_pairs": [
+            {
+                "id": pair["id"],
+                "name": pair["name"],
+                "person_ids": pair["person_ids"],
+            }
+            for pair in catalog_data["acting_pairs"]
+        ],
+    }
+    import_catalog(connection, parse_catalog(basic))
+    catalog_data["people"][0].update(
+        nationality="Tailandesa",
+        image_url="https://images.example/one.jpg",
+        image_source_url="https://example.com/one",
+    )
+    catalog_data["people"][1].update(
+        nationality="Tailandesa",
+        image_url="https://images.example/two.jpg",
+        image_source_url="https://example.com/two",
+    )
+    catalog_data["acting_pairs"][0].update(
+        active_since=2026,
+        image_url="https://images.example/pair.jpg",
+        image_source_url="https://example.com/pair",
+    )
+
+    summary = import_catalog(connection, parse_catalog(catalog_data))
+
+    assert summary.updated["people"] == 2
+    assert summary.updated["acting_pairs"] == 1
+    assert summary.updated_total == 3
+    person = connection.execute(
+        "SELECT stage_name, nationality, image_url FROM people WHERE id = ?",
+        ("sample-one",),
+    ).fetchone()
+    assert tuple(person) == (
+        "One",
+        "Tailandesa",
+        "https://images.example/one.jpg",
+    )
+    pair = connection.execute(
+        "SELECT active_since, image_url FROM acting_pairs WHERE id = ?",
+        ("sample-pair",),
+    ).fetchone()
+    assert tuple(pair) == (2026, "https://images.example/pair.jpg")
+
+    repeated = import_catalog(connection, parse_catalog(catalog_data))
+    assert repeated.updated_total == 0
+    assert repeated.unchanged_total == 11
+
+
+@pytest.mark.parametrize(
+    ("section", "field", "value", "table"),
+    [
+        ("people", "stage_name", "Another One", "people"),
+        ("acting_pairs", "active_since", 2025, "acting_pairs"),
+    ],
+)
+def test_import_rejects_overwriting_enriched_person_and_pair_fields(
+    connection, catalog_data, section, field, value, table
+) -> None:
+    catalog_data["acting_pairs"][0]["active_since"] = 2026
+    import_catalog(connection, parse_catalog(catalog_data))
+    catalog_data[section][0][field] = value
+
+    with pytest.raises(CatalogConflictError, match=table):
+        import_catalog(connection, parse_catalog(catalog_data))
+
+
 def test_conflict_rolls_back_the_whole_import(connection, catalog_data) -> None:
     document = parse_catalog(catalog_data)
     import_catalog(connection, document)
