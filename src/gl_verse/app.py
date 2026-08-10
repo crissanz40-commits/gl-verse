@@ -75,6 +75,7 @@ def main(argv: list[str] | None = None) -> int:
     prefix = "Simulación correcta" if summary.dry_run else "Importación completada"
     print(
         f"{prefix}: {summary.inserted_total} registros nuevos, "
+        f"{summary.updated_total} actualizados, "
         f"{summary.unchanged_total} sin cambios."
     )
     return 0
