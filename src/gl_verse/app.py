@@ -7,6 +7,7 @@ from pathlib import Path
 
 from gl_verse.catalog_import import CatalogImportError, import_catalog, load_catalog
 from gl_verse.database import connect_database
+from gl_verse.web_server import serve_web
 
 
 def welcome_message() -> str:
@@ -33,6 +34,18 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Valida toda la carga y la revierte antes de guardar",
     )
+    web = commands.add_parser(
+        "web",
+        help="Sirve el frontal y la API del catálogo",
+    )
+    web.add_argument(
+        "--database",
+        type=Path,
+        default=Path("data/gl_verse.db"),
+        help="Base SQLite consultada por la API (por defecto: data/gl_verse.db)",
+    )
+    web.add_argument("--host", default="127.0.0.1", help="Interfaz de red")
+    web.add_argument("--port", type=int, default=8000, help="Puerto HTTP")
     return parser
 
 
@@ -41,6 +54,14 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command is None:
         print(welcome_message())
+        return 0
+
+    if args.command == "web":
+        try:
+            serve_web(args.database, host=args.host, port=args.port)
+        except (OSError, sqlite3.Error) as error:
+            print(f"No se pudo iniciar GL Verse: {error}")
+            return 1
         return 0
 
     try:

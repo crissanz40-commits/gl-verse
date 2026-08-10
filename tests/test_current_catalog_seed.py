@@ -1,6 +1,11 @@
 import pytest
 
-from gl_verse.database import connect_database, get_schema_version, initialize_database
+from gl_verse.database import (
+    SCHEMA_VERSION,
+    connect_database,
+    get_schema_version,
+    initialize_database,
+)
 
 
 @pytest.fixture
@@ -17,10 +22,8 @@ def test_version_four_upgrades_with_the_complete_current_catalog(connection) -> 
 
     initialize_database(connection)
 
-    assert get_schema_version(connection) == 6
-    titles = connection.execute(
-        "SELECT title FROM series ORDER BY title COLLATE NOCASE"
-    ).fetchall()
+    assert get_schema_version(connection) == SCHEMA_VERSION
+    titles = connection.execute("SELECT title FROM series ORDER BY title COLLATE NOCASE").fetchall()
     assert [row["title"] for row in titles] == [
         "23.5",
         "Affair",
@@ -111,7 +114,14 @@ def test_seed_is_safe_to_initialize_twice(connection) -> None:
     initialize_database(connection)
     expected = {
         table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-        for table in ("series", "people", "characters", "credits", "acting_pairs", "series_pairings")
+        for table in (
+            "series",
+            "people",
+            "characters",
+            "credits",
+            "acting_pairs",
+            "series_pairings",
+        )
     }
 
     initialize_database(connection)
@@ -135,7 +145,7 @@ def test_seed_preserves_an_existing_series_record(connection) -> None:
 
     initialize_database(connection)
 
-    title = connection.execute(
-        "SELECT title FROM series WHERE id = 'pluto-2024'"
-    ).fetchone()["title"]
+    title = connection.execute("SELECT title FROM series WHERE id = 'pluto-2024'").fetchone()[
+        "title"
+    ]
     assert title == "Mi ficha de Pluto"

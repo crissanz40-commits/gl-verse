@@ -10,7 +10,12 @@ from gl_verse.catalog_import import (
     import_catalog,
     parse_catalog,
 )
-from gl_verse.database import connect_database, get_schema_version, initialize_database
+from gl_verse.database import (
+    SCHEMA_VERSION,
+    connect_database,
+    get_schema_version,
+    initialize_database,
+)
 
 
 @pytest.fixture
@@ -31,6 +36,7 @@ def catalog_data():
                 "title": "Sample Series",
                 "country": "Tailandia",
                 "release_year": 2026,
+                "release_date": "2026-03-09",
                 "status": "announced",
                 "synopsis": "Una ficha utilizada para probar el importador.",
                 "cover_image_url": "https://images.example/sample.jpg",
@@ -112,12 +118,22 @@ def test_imports_a_complete_catalog_with_provenance(connection, catalog_data) ->
         "sources": 1,
         "provenance": 1,
     }
-    assert connection.execute(
-        "SELECT title FROM series WHERE id = 'sample-series-2026'"
-    ).fetchone()[0] == "Sample Series"
-    assert connection.execute(
-        "SELECT status FROM provenance_records WHERE entity_id = 'sample-series-2026'"
-    ).fetchone()[0] == "verified"
+    assert (
+        connection.execute("SELECT title FROM series WHERE id = 'sample-series-2026'").fetchone()[0]
+        == "Sample Series"
+    )
+    assert (
+        connection.execute(
+            "SELECT release_date FROM series WHERE id = 'sample-series-2026'"
+        ).fetchone()[0]
+        == "2026-03-09"
+    )
+    assert (
+        connection.execute(
+            "SELECT status FROM provenance_records WHERE entity_id = 'sample-series-2026'"
+        ).fetchone()[0]
+        == "verified"
+    )
 
 
 def test_version_five_upgrades_without_losing_the_catalog() -> None:
@@ -127,11 +143,14 @@ def test_version_five_upgrades_without_losing_the_catalog() -> None:
 
     initialize_database(database)
 
-    assert get_schema_version(database) == 6
+    assert get_schema_version(database) == SCHEMA_VERSION
     assert database.execute("SELECT COUNT(*) FROM series").fetchone()[0] == series_before
-    assert database.execute(
-        "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'catalog_sources'"
-    ).fetchone()[0] == 1
+    assert (
+        database.execute(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'catalog_sources'"
+        ).fetchone()[0]
+        == 1
+    )
     database.close()
 
 
@@ -140,6 +159,16 @@ def test_second_import_is_idempotent(connection, catalog_data) -> None:
     import_catalog(connection, document)
 
     summary = import_catalog(connection, document)
+
+    assert summary.inserted_total == 0
+    assert summary.unchanged_total == 11
+
+
+def test_legacy_import_without_release_date_remains_idempotent(connection, catalog_data) -> None:
+    import_catalog(connection, parse_catalog(catalog_data))
+    del catalog_data["series"][0]["release_date"]
+
+    summary = import_catalog(connection, parse_catalog(catalog_data))
 
     assert summary.inserted_total == 0
     assert summary.unchanged_total == 11
@@ -162,12 +191,16 @@ def test_conflict_rolls_back_the_whole_import(connection, catalog_data) -> None:
     with pytest.raises(CatalogConflictError, match="series"):
         import_catalog(connection, parse_catalog(conflicting))
 
-    assert connection.execute(
-        "SELECT COUNT(*) FROM catalog_sources WHERE id = 'source-before-conflict'"
-    ).fetchone()[0] == 0
-    assert connection.execute(
-        "SELECT title FROM series WHERE id = 'sample-series-2026'"
-    ).fetchone()[0] == "Sample Series"
+    assert (
+        connection.execute(
+            "SELECT COUNT(*) FROM catalog_sources WHERE id = 'source-before-conflict'"
+        ).fetchone()[0]
+        == 0
+    )
+    assert (
+        connection.execute("SELECT title FROM series WHERE id = 'sample-series-2026'").fetchone()[0]
+        == "Sample Series"
+    )
 
 
 def test_dry_run_validates_but_does_not_save(connection, catalog_data) -> None:
@@ -175,9 +208,12 @@ def test_dry_run_validates_but_does_not_save(connection, catalog_data) -> None:
 
     assert summary.dry_run is True
     assert summary.inserted_total == 11
-    assert connection.execute(
-        "SELECT COUNT(*) FROM series WHERE id = 'sample-series-2026'"
-    ).fetchone()[0] == 0
+    assert (
+        connection.execute(
+            "SELECT COUNT(*) FROM series WHERE id = 'sample-series-2026'"
+        ).fetchone()[0]
+        == 0
+    )
 
 
 def test_rejects_possible_duplicate_series_with_another_id(connection, catalog_data) -> None:
@@ -204,9 +240,12 @@ def test_rejects_unknown_relations_before_writing(connection, catalog_data) -> N
     with pytest.raises(CatalogImportError, match="missing-person"):
         import_catalog(connection, parse_catalog(catalog_data))
 
-    assert connection.execute(
-        "SELECT COUNT(*) FROM catalog_sources WHERE id = 'sample-official'"
-    ).fetchone()[0] == 0
+    assert (
+        connection.execute(
+            "SELECT COUNT(*) FROM catalog_sources WHERE id = 'sample-official'"
+        ).fetchone()[0]
+        == 0
+    )
 
 
 def test_cli_imports_a_json_file(tmp_path, catalog_data, capsys) -> None:
@@ -214,13 +253,14 @@ def test_cli_imports_a_json_file(tmp_path, catalog_data, capsys) -> None:
     database_path = tmp_path / "gl-verse.db"
     catalog_path.write_text(json.dumps(catalog_data), encoding="utf-8")
 
-    result = main(
-        ["importar-series", str(catalog_path), "--database", str(database_path)]
-    )
+    result = main(["importar-series", str(catalog_path), "--database", str(database_path)])
 
     assert result == 0
     assert "Importación completada: 11 registros nuevos" in capsys.readouterr().out
     with sqlite3.connect(database_path) as database:
-        assert database.execute(
-            "SELECT COUNT(*) FROM series WHERE id = 'sample-series-2026'"
-        ).fetchone()[0] == 1
+        assert (
+            database.execute(
+                "SELECT COUNT(*) FROM series WHERE id = 'sample-series-2026'"
+            ).fetchone()[0]
+            == 1
+        )

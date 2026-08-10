@@ -12,6 +12,7 @@ El documento debe ser JSON UTF-8, declarar `format_version: 1` y utilizar única
       "original_title": "Título original",
       "country": "Tailandia",
       "release_year": 2026,
+      "release_date": "2026-03-09",
       "status": "announced",
       "synopsis": "Sinopsis contrastada",
       "cover_image_url": "https://example.com/cover.jpg",
@@ -44,7 +45,7 @@ El documento debe ser JSON UTF-8, declarar `format_version: 1` y utilizar única
 
 | Sección | Campos obligatorios | Campos opcionales |
 | --- | --- | --- |
-| `series` | `id`, `title`, `country`, `release_year`, `status` | `original_title`, `synopsis`, `cover_image_url`, `cover_image_source_url` |
+| `series` | `id`, `title`, `country`, `release_year`, `status` | `release_date`, `original_title`, `synopsis`, `cover_image_url`, `cover_image_source_url` |
 | `people` | `id`, `name` | `stage_name`, `nationality`, `image_url`, `image_source_url` |
 | `characters` | `id`, `name`, `series_id` | — |
 | `credits` | `series_id`, `person_id`, `role` | `character_id`, `cast_importance` |

@@ -123,8 +123,7 @@ def parse_catalog(raw: Any) -> CatalogDocument:
             ),
             credits=tuple(_parse_credit(item, index) for index, item in _items(root, "credits")),
             acting_pairs=tuple(
-                _parse_acting_pair(item, index)
-                for index, item in _items(root, "acting_pairs")
+                _parse_acting_pair(item, index) for index, item in _items(root, "acting_pairs")
             ),
             series_pairings=tuple(
                 _parse_series_pairing(item, index)
@@ -132,8 +131,7 @@ def parse_catalog(raw: Any) -> CatalogDocument:
             ),
             sources=tuple(_parse_source(item, index) for index, item in _items(root, "sources")),
             provenance=tuple(
-                _parse_provenance(item, index)
-                for index, item in _items(root, "provenance")
+                _parse_provenance(item, index) for index, item in _items(root, "provenance")
             ),
         )
     except (AttributeError, TypeError, ValueError) as error:
@@ -266,13 +264,20 @@ def _parse_series(value: Any, index: int) -> Series:
         "series",
         index,
         {"id", "title", "country", "release_year", "status"},
-        {"original_title", "synopsis", "cover_image_url", "cover_image_source_url"},
+        {
+            "release_date",
+            "original_title",
+            "synopsis",
+            "cover_image_url",
+            "cover_image_source_url",
+        },
     )
     return Series(
         id=item["id"],
         title=item["title"],
         country=item["country"],
         release_year=item["release_year"],
+        release_date=_optional_date(item.get("release_date"), f"series[{index}].release_date"),
         original_title=item.get("original_title"),
         status=SeriesStatus(item["status"]),
         synopsis=item.get("synopsis"),
@@ -429,9 +434,7 @@ def _unique(values: Any, message: str) -> None:
         seen.add(value)
 
 
-def _reject_database_duplicates(
-    connection: sqlite3.Connection, document: CatalogDocument
-) -> None:
+def _reject_database_duplicates(connection: sqlite3.Connection, document: CatalogDocument) -> None:
     for item in document.series:
         if connection.execute("SELECT 1 FROM series WHERE id = ?", (item.id,)).fetchone():
             continue
@@ -526,20 +529,14 @@ def _validate_references(connection: sqlite3.Connection, document: CatalogDocume
         _require_reference(item.entity_id, available[section], "trazabilidad", "entidad")
 
 
-def _available_ids(
-    connection: sqlite3.Connection, table: str, document_ids: Any
-) -> set[str]:
+def _available_ids(connection: sqlite3.Connection, table: str, document_ids: Any) -> set[str]:
     stored = {row["id"] for row in connection.execute(f"SELECT id FROM {table}").fetchall()}
     return stored | set(document_ids)
 
 
-def _require_reference(
-    reference: str, available: set[str], context: str, target: str
-) -> None:
+def _require_reference(reference: str, available: set[str], context: str, target: str) -> None:
     if reference not in available:
-        raise CatalogImportError(
-            f"Referencia desconocida en {context}: {target} {reference!r}"
-        )
+        raise CatalogImportError(f"Referencia desconocida en {context}: {target} {reference!r}")
 
 
 def _record_result(
@@ -583,15 +580,45 @@ def _insert_or_compare(
 
 def _import_series(connection, entities, inserted, unchanged) -> None:
     columns = (
-        "id", "title", "country", "release_year", "original_title", "status", "synopsis",
-        "cover_image_url", "cover_image_source_url",
+        "id",
+        "title",
+        "country",
+        "release_year",
+        "release_date",
+        "original_title",
+        "status",
+        "synopsis",
+        "cover_image_url",
+        "cover_image_source_url",
     )
     for item in entities:
+        release_date = item.release_date.isoformat() if item.release_date else None
+        if release_date is None:
+            stored = connection.execute(
+                "SELECT release_date FROM series WHERE id = ?", (item.id,)
+            ).fetchone()
+            if stored is not None:
+                release_date = stored["release_date"]
         _insert_or_compare(
-            connection, table="series", section="series", key_columns=("id",), columns=columns,
-            values=(item.id, item.title, item.country, item.release_year, item.original_title,
-                    item.status.value, item.synopsis, item.cover_image_url,
-                    item.cover_image_source_url), inserted=inserted, unchanged=unchanged,
+            connection,
+            table="series",
+            section="series",
+            key_columns=("id",),
+            columns=columns,
+            values=(
+                item.id,
+                item.title,
+                item.country,
+                item.release_year,
+                release_date,
+                item.original_title,
+                item.status.value,
+                item.synopsis,
+                item.cover_image_url,
+                item.cover_image_source_url,
+            ),
+            inserted=inserted,
+            unchanged=unchanged,
         )
 
 
@@ -599,9 +626,21 @@ def _import_people(connection, entities, inserted, unchanged) -> None:
     columns = ("id", "name", "stage_name", "nationality", "image_url", "image_source_url")
     for item in entities:
         _insert_or_compare(
-            connection, table="people", section="people", key_columns=("id",), columns=columns,
-            values=(item.id, item.name, item.stage_name, item.nationality, item.image_url,
-                    item.image_source_url), inserted=inserted, unchanged=unchanged,
+            connection,
+            table="people",
+            section="people",
+            key_columns=("id",),
+            columns=columns,
+            values=(
+                item.id,
+                item.name,
+                item.stage_name,
+                item.nationality,
+                item.image_url,
+                item.image_source_url,
+            ),
+            inserted=inserted,
+            unchanged=unchanged,
         )
 
 
@@ -609,8 +648,13 @@ def _import_characters(connection, entities, inserted, unchanged) -> None:
     columns = ("id", "name", "series_id")
     for item in entities:
         _insert_or_compare(
-            connection, table="characters", section="characters", key_columns=("id",),
-            columns=columns, values=(item.id, item.name, item.series_id), inserted=inserted,
+            connection,
+            table="characters",
+            section="characters",
+            key_columns=("id",),
+            columns=columns,
+            values=(item.id, item.name, item.series_id),
+            inserted=inserted,
             unchanged=unchanged,
         )
 
@@ -619,7 +663,10 @@ def _import_credits(connection, entities, inserted, unchanged) -> None:
     columns = ("series_id", "person_id", "role", "character_id", "cast_importance")
     for item in entities:
         values = (
-            item.series_id, item.person_id, item.role.value, item.character_id,
+            item.series_id,
+            item.person_id,
+            item.role.value,
+            item.character_id,
             item.cast_importance.value if item.cast_importance else None,
         )
         if item.character_id is None:
@@ -659,28 +706,59 @@ def _import_credits(connection, entities, inserted, unchanged) -> None:
 
 def _import_acting_pairs(connection, entities, inserted, unchanged) -> None:
     columns = (
-        "id", "name", "first_person_id", "second_person_id", "active_since", "image_url",
+        "id",
+        "name",
+        "first_person_id",
+        "second_person_id",
+        "active_since",
+        "image_url",
         "image_source_url",
     )
     for item in entities:
         _insert_or_compare(
-            connection, table="acting_pairs", section="acting_pairs", key_columns=("id",),
+            connection,
+            table="acting_pairs",
+            section="acting_pairs",
+            key_columns=("id",),
             columns=columns,
-            values=(item.id, item.name, *item.person_ids, item.active_since, item.image_url,
-                    item.image_source_url), inserted=inserted, unchanged=unchanged,
+            values=(
+                item.id,
+                item.name,
+                *item.person_ids,
+                item.active_since,
+                item.image_url,
+                item.image_source_url,
+            ),
+            inserted=inserted,
+            unchanged=unchanged,
         )
 
 
 def _import_series_pairings(connection, entities, inserted, unchanged) -> None:
     columns = (
-        "id", "series_id", "acting_pair_id", "first_character_id", "second_character_id", "role",
+        "id",
+        "series_id",
+        "acting_pair_id",
+        "first_character_id",
+        "second_character_id",
+        "role",
     )
     for item in entities:
         _insert_or_compare(
-            connection, table="series_pairings", section="series_pairings", key_columns=("id",),
+            connection,
+            table="series_pairings",
+            section="series_pairings",
+            key_columns=("id",),
             columns=columns,
-            values=(item.id, item.series_id, item.acting_pair_id, *item.character_ids,
-                    item.role.value), inserted=inserted, unchanged=unchanged,
+            values=(
+                item.id,
+                item.series_id,
+                item.acting_pair_id,
+                *item.character_ids,
+                item.role.value,
+            ),
+            inserted=inserted,
+            unchanged=unchanged,
         )
 
 
@@ -688,24 +766,51 @@ def _import_sources(connection, entities, inserted, unchanged) -> None:
     columns = ("id", "title", "url", "source_type", "publisher", "published_on")
     for item in entities:
         _insert_or_compare(
-            connection, table="catalog_sources", section="sources", key_columns=("id",),
+            connection,
+            table="catalog_sources",
+            section="sources",
+            key_columns=("id",),
             columns=columns,
-            values=(item.id, item.title, item.url, item.source_type.value, item.publisher,
-                    item.published_on.isoformat() if item.published_on else None),
-            inserted=inserted, unchanged=unchanged,
+            values=(
+                item.id,
+                item.title,
+                item.url,
+                item.source_type.value,
+                item.publisher,
+                item.published_on.isoformat() if item.published_on else None,
+            ),
+            inserted=inserted,
+            unchanged=unchanged,
         )
 
 
 def _import_provenance(connection, entities, inserted, unchanged) -> None:
     columns = (
-        "source_id", "entity_type", "entity_id", "field_name", "checked_on", "status", "note",
+        "source_id",
+        "entity_type",
+        "entity_id",
+        "field_name",
+        "checked_on",
+        "status",
+        "note",
     )
     keys = ("source_id", "entity_type", "entity_id", "field_name")
     for item in entities:
         _insert_or_compare(
-            connection, table="provenance_records", section="provenance", key_columns=keys,
+            connection,
+            table="provenance_records",
+            section="provenance",
+            key_columns=keys,
             columns=columns,
-            values=(item.source_id, item.entity_type.value, item.entity_id, item.field_name,
-                    item.checked_on.isoformat(), item.status.value, item.note), inserted=inserted,
+            values=(
+                item.source_id,
+                item.entity_type.value,
+                item.entity_id,
+                item.field_name,
+                item.checked_on.isoformat(),
+                item.status.value,
+                item.note,
+            ),
+            inserted=inserted,
             unchanged=unchanged,
         )

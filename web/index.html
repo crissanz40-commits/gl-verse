@@ -41,8 +41,8 @@
           <h1>Encuentra tu próxima<br /><em>historia favorita.</em></h1>
           <p class="hero-description">Series, parejas y dónde verlas. Con el dato que de verdad importa: cuánto drama te espera por el camino.</p>
           <div class="hero-actions">
-            <button class="primary-button" type="button" data-quick-filter="comfort">
-              <span aria-hidden="true">♡</span> Solo zero dramas
+            <button class="primary-button" type="button" data-open-latest>
+              <span aria-hidden="true">♡</span> Ver último estreno
             </button>
             <button class="ghost-button" type="button" data-open-featured>Ver ficha de GAP <span>→</span></button>
           </div>
@@ -62,7 +62,7 @@
         </div>
       </section>
 
-      <section class="provider-section" aria-labelledby="providers-title">
+      <section class="provider-section" aria-labelledby="providers-title" hidden>
         <div class="section-heading compact">
           <div><p class="eyebrow">DÓNDE VER</p><h2 id="providers-title">Tus plataformas</h2></div>
           <p>Selecciona una o varias</p>
@@ -73,13 +73,13 @@
       <section class="catalog" id="popular">
         <aside class="filters" aria-label="Filtros del catálogo">
           <div class="filter-title"><div><span>FILTROS GL</span><h2>A tu medida</h2></div><button id="reset-filters" type="button">Limpiar</button></div>
-          <fieldset>
+          <fieldset hidden>
             <legend>Nivel de drama</legend>
             <label class="range-label"><span>Suavecito</span><span>Necesito terapia</span></label>
             <input id="drama-filter" type="range" min="1" max="5" value="5" />
             <div class="range-value">Hasta <strong id="drama-value">5</strong>/5</div>
           </fieldset>
-          <fieldset>
+          <fieldset hidden>
             <legend>Tipo de final</legend>
             <label class="check-row"><input type="checkbox" name="ending" value="happy" /><span class="fake-check"></span><span>Final feliz</span><b>☺</b></label>
             <label class="check-row"><input type="checkbox" name="ending" value="open" /><span class="fake-check"></span><span>Final abierto</span><b>◌</b></label>
@@ -101,13 +101,13 @@
               <select id="release-year-filter" aria-label="Filtrar por año de estreno"><option value="">Todos los años</option></select>
             </div>
           </fieldset>
-          <div class="comfort-box"><span>♡</span><div><strong>Modo confort</strong><p>Final feliz y drama máximo 2.</p></div><button id="comfort-toggle" class="toggle" type="button" role="switch" aria-checked="false"><i></i></button></div>
+          <div class="comfort-box" hidden><span>♡</span><div><strong>Modo confort</strong><p>Final feliz y drama máximo 2.</p></div><button id="comfort-toggle" class="toggle" type="button" role="switch" aria-checked="false"><i></i></button></div>
         </aside>
 
         <div class="catalog-content">
           <div class="section-heading">
-            <div><p class="eyebrow">SELECCIÓN GL VERSE</p><h2>Popular esta semana</h2></div>
-            <div class="sort-control"><span id="result-count">6 títulos</span><select id="sort-select" aria-label="Ordenar catálogo"><option value="popular">Más populares</option><option value="score">Mejor nota</option><option value="newest">Más recientes</option><option value="drama">Menos drama</option></select></div>
+            <div><p class="eyebrow">SELECCIÓN GL VERSE</p><h2>Catálogo</h2></div>
+            <div class="sort-control"><span id="result-count">Cargando…</span><select id="sort-select" aria-label="Ordenar catálogo"><option value="newest">Más recientes</option><option value="title">Título</option><option value="score" disabled>Mejor nota · próximamente</option></select></div>
           </div>
           <div class="active-filters" id="active-filters" aria-live="polite"></div>
           <div class="card-grid" id="series-grid"></div>
@@ -134,7 +134,7 @@
     <footer>
       <a class="brand" href="#"><span class="brand-mark">GL</span><span>VERSE</span></a>
       <p>Hecho con cariño para encontrar historias que nos hagan bien.</p>
-      <span>Prototipo · Estructura preparada para datos trazables</span>
+      <span>Catálogo conectado a datos trazables</span>
     </footer>
     <script src="app.js"></script>
   </body>
