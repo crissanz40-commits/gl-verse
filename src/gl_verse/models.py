@@ -1,6 +1,7 @@
 """Entidades principales del universo GL."""
 
 from dataclasses import dataclass
+from datetime import date
 from enum import Enum
 
 
@@ -74,6 +75,7 @@ class Series:
     title: str
     country: str
     release_year: int
+    release_date: date | None = None
     original_title: str | None = None
     status: SeriesStatus = SeriesStatus.ANNOUNCED
     synopsis: str | None = None
@@ -87,6 +89,9 @@ class Series:
 
         if self.release_year < 1900:
             raise ValueError("El año de estreno debe ser igual o posterior a 1900")
+
+        if self.release_date is not None and self.release_date.year != self.release_year:
+            raise ValueError("La fecha y el año de estreno deben coincidir")
 
         _validate_image_reference(
             self.cover_image_url,

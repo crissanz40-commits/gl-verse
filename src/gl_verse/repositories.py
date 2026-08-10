@@ -1,6 +1,7 @@
 """Repositorios para guardar y consultar el dominio de GL Verse."""
 
 import sqlite3
+from datetime import date
 
 from gl_verse.models import Series, SeriesStatus
 
@@ -26,19 +27,21 @@ class SeriesRepository:
                         title,
                         country,
                         release_year,
+                        release_date,
                         original_title,
                         status,
                         synopsis,
                         cover_image_url,
                         cover_image_source_url
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         series.id,
                         series.title,
                         series.country,
                         series.release_year,
+                        series.release_date.isoformat() if series.release_date else None,
                         series.original_title,
                         series.status.value,
                         series.synopsis,
@@ -55,7 +58,7 @@ class SeriesRepository:
         """Recupera una serie por su identificador."""
         row = self._connection.execute(
             """
-            SELECT id, title, country, release_year, original_title, status, synopsis,
+            SELECT id, title, country, release_year, release_date, original_title, status, synopsis,
                    cover_image_url, cover_image_source_url
             FROM series
             WHERE id = ?
@@ -69,7 +72,7 @@ class SeriesRepository:
         """Devuelve todas las series ordenadas por título."""
         rows = self._connection.execute(
             """
-            SELECT id, title, country, release_year, original_title, status, synopsis,
+            SELECT id, title, country, release_year, release_date, original_title, status, synopsis,
                    cover_image_url, cover_image_source_url
             FROM series
             ORDER BY title COLLATE NOCASE
@@ -85,6 +88,7 @@ class SeriesRepository:
             title=row["title"],
             country=row["country"],
             release_year=row["release_year"],
+            release_date=date.fromisoformat(row["release_date"]) if row["release_date"] else None,
             original_title=row["original_title"],
             status=SeriesStatus(row["status"]),
             synopsis=row["synopsis"],

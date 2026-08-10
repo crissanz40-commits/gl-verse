@@ -9,7 +9,7 @@ Estas instrucciones se aplican a todo el repositorio.
 - GL Verse utiliza Python 3.11 o posterior y organiza el código dentro de `src/`.
 - Mantén separados los datos objetivos del catálogo y los datos personales de visionado.
 - Conserva la distinción entre series, personas, personajes, créditos, parejas ficticias y parejas artísticas.
-- Trata `web/` como un prototipo estático hasta que el repositorio incorpore una API de forma explícita.
+- Sirve `web/` y la API desde el mismo proceso para que el frontal consulte SQLite sin duplicar el catálogo en JavaScript.
 
 ## Cómo realizar cambios
 

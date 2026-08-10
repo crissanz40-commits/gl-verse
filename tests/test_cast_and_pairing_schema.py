@@ -2,7 +2,12 @@ import sqlite3
 
 import pytest
 
-from gl_verse.database import connect_database, get_schema_version, initialize_database
+from gl_verse.database import (
+    SCHEMA_VERSION,
+    connect_database,
+    get_schema_version,
+    initialize_database,
+)
 
 
 @pytest.fixture
@@ -101,7 +106,7 @@ def test_version_three_upgrades_without_losing_gap() -> None:
 
     initialize_database(connection)
 
-    assert get_schema_version(connection) == 6
+    assert get_schema_version(connection) == SCHEMA_VERSION
     gap = connection.execute(
         "SELECT title, cover_image_url FROM series WHERE id = 'gap-2022'"
     ).fetchone()
