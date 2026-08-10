@@ -169,10 +169,10 @@ def import_catalog(
         _validate_references(connection, document)
         _import_sources(connection, document.sources, inserted, unchanged)
         _import_series(connection, document.series, inserted, updated, unchanged)
-        _import_people(connection, document.people, inserted, unchanged)
+        _import_people(connection, document.people, inserted, updated, unchanged)
         _import_characters(connection, document.characters, inserted, unchanged)
         _import_credits(connection, document.credits, inserted, unchanged)
-        _import_acting_pairs(connection, document.acting_pairs, inserted, unchanged)
+        _import_acting_pairs(connection, document.acting_pairs, inserted, updated, unchanged)
         _import_series_pairings(connection, document.series_pairings, inserted, unchanged)
         _import_provenance(connection, document.provenance, inserted, unchanged)
         if dry_run:
@@ -660,7 +660,7 @@ def _import_series(connection, entities, inserted, updated, unchanged) -> None:
         )
 
 
-def _import_people(connection, entities, inserted, unchanged) -> None:
+def _import_people(connection, entities, inserted, updated, unchanged) -> None:
     columns = ("id", "name", "stage_name", "nationality", "image_url", "image_source_url")
     for item in entities:
         _insert_or_compare(
@@ -679,6 +679,13 @@ def _import_people(connection, entities, inserted, unchanged) -> None:
             ),
             inserted=inserted,
             unchanged=unchanged,
+            updated=updated,
+            enrichable_columns=(
+                "stage_name",
+                "nationality",
+                "image_url",
+                "image_source_url",
+            ),
         )
 
 
@@ -742,7 +749,7 @@ def _import_credits(connection, entities, inserted, unchanged) -> None:
         _record_result("credits", True, inserted, unchanged)
 
 
-def _import_acting_pairs(connection, entities, inserted, unchanged) -> None:
+def _import_acting_pairs(connection, entities, inserted, updated, unchanged) -> None:
     columns = (
         "id",
         "name",
@@ -769,6 +776,8 @@ def _import_acting_pairs(connection, entities, inserted, unchanged) -> None:
             ),
             inserted=inserted,
             unchanged=unchanged,
+            updated=updated,
+            enrichable_columns=("active_since", "image_url", "image_source_url"),
         )
 
 
