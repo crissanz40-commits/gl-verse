@@ -12,7 +12,7 @@ const dramaLevels = ["zero_drama", "light", "moderate", "high"];
 const dramaLabels = { zero_drama: "Sin drama", light: "Suave", moderate: "Moderado", high: "Alto" };
 const endingLabels = { happy_ever_after: "Feliz para siempre", happy_for_now: "Feliz por ahora", bittersweet: "Agridulce", open: "Abierto", sad: "Triste", tragic: "Trágico", unknown: "Sin confirmar" };
 const companyRoleLabels = { producer: "Producción", broadcaster: "Emisión", distributor: "Distribución" };
-const state = { search: "", provider: "", pairings: [], country: "", releaseMonth: "", releaseYear: "", drama: 3, endings: [], comfort: false, tag: "", sort: "newest", saved: new Set(), detailTrail: [] };
+const state = { search: "", provider: "", country: "", releaseMonth: "", releaseYear: "", drama: 3, endings: [], comfort: false, tag: "", sort: "newest", saved: new Set(), detailTrail: [] };
 const grid = document.querySelector("#series-grid");
 const resultCount = document.querySelector("#result-count");
 const activeFilters = document.querySelector("#active-filters");
@@ -139,7 +139,14 @@ function pairingSummary(item) {
 }
 
 function renderProviders() {
-  document.querySelector("#provider-list").innerHTML = providers.map((provider) => `
+  const providerSection = document.querySelector(".provider-section");
+  const visibleProviders = GLVerseCatalogFilters.providersForSeries(
+    providers,
+    visibleSeries({ ignoreProvider: true }),
+    state.provider,
+  );
+  providerSection.hidden = visibleProviders.length === 1 && !state.provider;
+  document.querySelector("#provider-list").innerHTML = visibleProviders.map((provider) => `
     <button class="provider-pill ${state.provider === provider.id ? "active" : ""}" type="button" data-provider="${provider.id}">
       <span class="provider-icon" style="background:${provider.color}">${provider.short}</span>
       <span>${provider.name}<small>${provider.name === "Todas" ? "Todo el catálogo" : "Ver disponibles"}</small></span>
@@ -153,18 +160,16 @@ function renderReleaseFilters() {
   document.querySelector("#release-year-filter").innerHTML = `<option value="">Todos los años</option>${years.map((year) => `<option value="${year}">${year}</option>`).join("")}`;
 }
 
-function visibleSeries() {
+function visibleSeries({ ignoreProvider = false } = {}) {
   const term = state.search.toLocaleLowerCase("es");
   return series.filter((item) => {
     const actressNames = item.cast.map((credit) => byId(actresses, credit.actressId)?.stageName).join(" ");
     const searchable = `${item.title} ${pairingSummary(item)} ${actressNames}`.toLocaleLowerCase("es");
-    const roles = pairingsForSeries(item.id).map((pairing) => pairing.role);
     const [releaseYear, releaseMonth] = releaseParts(item);
     const guide = item.viewingGuide;
     const endingGroup = guide && (["happy_ever_after", "happy_for_now"].includes(guide.endingType) ? "happy" : ["sad", "tragic"].includes(guide.endingType) ? "sad" : guide.endingType);
     return (!term || searchable.includes(term))
-      && (!state.pairings.length || state.pairings.some((role) => roles.includes(role)))
-      && (!state.provider || item.availability.some((entry) => entry.platformId === state.provider))
+      && (ignoreProvider || !state.provider || item.availability.some((entry) => entry.platformId === state.provider))
       && (!state.country || item.country === state.country)
       && (!state.releaseMonth || releaseMonth === state.releaseMonth.padStart(2, "0"))
       && (!state.releaseYear || releaseYear === state.releaseYear)
@@ -180,6 +185,7 @@ function visibleSeries() {
 
 function renderCards() {
   const items = visibleSeries();
+  renderProviders();
   resultCount.textContent = `${items.length} ${items.length === 1 ? "título" : "títulos"}`;
   grid.innerHTML = items.map((item, index) => `
     <article class="series-card">
@@ -218,7 +224,6 @@ function renderActiveFilters() {
   const chips = [];
   if (state.search) chips.push([`Búsqueda: ${state.search}`, "search"]);
   if (state.provider) chips.push([byId(providers, state.provider)?.name || state.provider, "provider"]);
-  state.pairings.forEach((value) => chips.push([roleLabels[value], `pairing:${value}`]));
   if (state.country) chips.push([state.country, "country"]);
   if (state.releaseMonth) chips.push([monthNames[Number(state.releaseMonth) - 1], "releaseMonth"]);
   if (state.releaseYear) chips.push([`Estreno ${state.releaseYear}`, "releaseYear"]);
@@ -336,7 +341,7 @@ function showDetail(type, id, push = true) {
 }
 
 function resetFilters() {
-  Object.assign(state, { search: "", provider: "", pairings: [], country: "", releaseMonth: "", releaseYear: "", drama: 3, endings: [], comfort: false, tag: "", sort: "newest" });
+  Object.assign(state, { search: "", provider: "", country: "", releaseMonth: "", releaseYear: "", drama: 3, endings: [], comfort: false, tag: "", sort: "newest" });
   document.querySelector("#search-input").value = "";
   document.querySelector("#drama-filter").value = 3;
   document.querySelector("#drama-value").textContent = 3;
@@ -347,12 +352,12 @@ function resetFilters() {
   document.querySelector("#sort-select").value = "newest";
   document.querySelectorAll(".filters input[type=checkbox]").forEach((input) => { input.checked = false; });
   document.querySelector("#comfort-toggle").setAttribute("aria-checked", "false");
-  renderProviders(); renderCards();
+  renderCards();
 }
 
 document.addEventListener("click", (event) => {
   const provider = event.target.closest("[data-provider]");
-  if (provider) { state.provider = provider.dataset.provider; renderProviders(); renderCards(); }
+  if (provider) { state.provider = provider.dataset.provider; renderCards(); }
   const save = event.target.closest("[data-save]");
   if (save) { event.stopPropagation(); state.saved.has(save.dataset.save) ? state.saved.delete(save.dataset.save) : state.saved.add(save.dataset.save); document.querySelector("#saved-count").textContent = state.saved.size; renderCards(); return; }
   const opener = event.target.closest("[data-open]");
@@ -363,7 +368,7 @@ document.addEventListener("click", (event) => {
   if (event.target.closest("[data-quick-filter=comfort]")) { state.comfort = true; document.querySelector("#comfort-toggle").setAttribute("aria-checked", "true"); renderCards(); document.querySelector("#popular").scrollIntoView(); }
   if (event.target.closest("[data-reset]")) resetFilters();
   const remove = event.target.closest("[data-remove-filter]");
-  if (remove) { const [type, value] = remove.dataset.removeFilter.split(":"); if (type === "search") { state.search = ""; document.querySelector("#search-input").value = ""; } if (type === "provider") { state.provider = ""; renderProviders(); } if (type === "drama") { state.drama = 3; document.querySelector("#drama-filter").value = 3; document.querySelector("#drama-value").textContent = 3; } if (type === "comfort") { state.comfort = false; document.querySelector("#comfort-toggle").setAttribute("aria-checked", "false"); } if (type === "ending") state.endings = state.endings.filter((ending) => ending !== value); if (type === "tag") { state.tag = ""; document.querySelector("#tag-filter").value = ""; } if (type === "pairing") state.pairings = state.pairings.filter((role) => role !== value); if (type === "country") { state.country = ""; document.querySelector("#country-filter").value = ""; } if (type === "releaseMonth") { state.releaseMonth = ""; document.querySelector("#release-month-filter").value = ""; } if (type === "releaseYear") { state.releaseYear = ""; document.querySelector("#release-year-filter").value = ""; } renderCards(); }
+  if (remove) { const [type, value] = remove.dataset.removeFilter.split(":"); if (type === "search") { state.search = ""; document.querySelector("#search-input").value = ""; } if (type === "provider") state.provider = ""; if (type === "drama") { state.drama = 3; document.querySelector("#drama-filter").value = 3; document.querySelector("#drama-value").textContent = 3; } if (type === "comfort") { state.comfort = false; document.querySelector("#comfort-toggle").setAttribute("aria-checked", "false"); } if (type === "ending") state.endings = state.endings.filter((ending) => ending !== value); if (type === "tag") { state.tag = ""; document.querySelector("#tag-filter").value = ""; } if (type === "country") { state.country = ""; document.querySelector("#country-filter").value = ""; } if (type === "releaseMonth") { state.releaseMonth = ""; document.querySelector("#release-month-filter").value = ""; } if (type === "releaseYear") { state.releaseYear = ""; document.querySelector("#release-year-filter").value = ""; } renderCards(); }
 });
 
 document.addEventListener("error", (event) => {
@@ -373,7 +378,6 @@ document.addEventListener("error", (event) => {
 document.querySelector("#search-input").addEventListener("input", (event) => { state.search = event.target.value.trim(); renderCards(); });
 document.querySelector("#drama-filter").addEventListener("input", (event) => { state.drama = Number(event.target.value); document.querySelector("#drama-value").textContent = state.drama; renderCards(); });
 document.querySelectorAll("input[name=ending]").forEach((input) => input.addEventListener("change", () => { state.endings = [...document.querySelectorAll("input[name=ending]:checked")].map((item) => item.value); renderCards(); }));
-document.querySelectorAll("input[name=pairing]").forEach((input) => input.addEventListener("change", () => { state.pairings = [...document.querySelectorAll("input[name=pairing]:checked")].map((item) => item.value); renderCards(); }));
 document.querySelector("#country-filter").addEventListener("change", (event) => { state.country = event.target.value; renderCards(); });
 document.querySelector("#release-month-filter").addEventListener("change", (event) => { state.releaseMonth = event.target.value; renderCards(); });
 document.querySelector("#release-year-filter").addEventListener("change", (event) => { state.releaseYear = event.target.value; renderCards(); });
@@ -398,7 +402,6 @@ async function loadCatalog() {
       { id: "", name: "Todas", short: "GL", color: "#6f285f" },
       ...payload.platforms.map((platform) => ({ ...platform, short: platform.name.slice(0, 2).toUpperCase(), color: "#9b4d85" })),
     ];
-    document.querySelector(".provider-section").hidden = payload.platforms.length === 0;
     const countries = [...new Set(series.map((item) => item.country))].sort((a, b) => a.localeCompare(b, "es"));
     document.querySelector("#country-filter").innerHTML = `<option value="">Todos los países</option>${countries.map((country) => `<option>${country}</option>`).join("")}`;
     const hasViewingGuides = series.some((item) => item.viewingGuide);
@@ -407,7 +410,6 @@ async function loadCatalog() {
     document.querySelector("#comfort-box").hidden = !hasViewingGuides;
     document.querySelector("#tag-fieldset").hidden = payload.tags.length === 0;
     document.querySelector("#tag-filter").innerHTML = `<option value="">Todas las etiquetas</option>${payload.tags.map((tag) => `<option value="${tag.id}">${tag.name}</option>`).join("")}`;
-    renderProviders();
     renderReleaseFilters();
     renderCards();
     renderUniverse();
