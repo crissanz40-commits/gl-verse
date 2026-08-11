@@ -15,6 +15,7 @@ La carpeta `web/` contiene la experiencia frontal responsive. El comando `gl-ver
 - espacios de portada e imagen preparados para mostrar su URL y fuente.
 - disponibilidad por plataforma y territorio, con modelo de acceso y subtítulos;
 - filtro por plataforma alimentado por SQLite.
+- revisión editorial por serie, con fichas pendientes o aprobadas persistidas en SQLite.
 
 Para probar el frontal y la API con la base local:
 
@@ -43,6 +44,8 @@ La persistencia utiliza migraciones SQL numeradas:
 - `007_series_release_date.sql`: fecha completa de estreno para filtrar por mes y año.
 - `008_platforms_and_availability.sql`: plataformas y disponibilidad territorial con subtítulos.
 - `009_character_pairings.sql`: desacopla las parejas ficticias de las parejas artísticas.
+- `010_extended_catalog.sql`: persiste empresas, colecciones, episodios, etiquetas, advertencias y guías de visionado.
+- `011_series_review_status.sql`: guarda la aprobación editorial manual de cada ficha sin mezclarla con el estado de emisión.
 
 Una base nueva ejecuta todas las migraciones en orden. Una base existente aplica únicamente las versiones pendientes.
 
@@ -110,6 +113,10 @@ SQLite es gratuito, no necesita servidor y guarda toda la información en `data/
 ### Fuentes y trazabilidad
 
 `Source` y `ProvenanceRecord` permiten vincular cada dato con su fuente, fecha de comprobación y estado de confianza.
+
+### Revisión editorial
+
+Cada ficha aparece inicialmente como pendiente. Desde su detalle en la web puede marcarse como revisada o reabrirse. Este estado es una decisión editorial local y no reemplaza la trazabilidad del catálogo; la skill de incorporación omite las fichas aprobadas salvo que se solicite expresamente corregirlas.
 
 ## Preparación del entorno
 

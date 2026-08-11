@@ -143,6 +143,7 @@ button, select { cursor: pointer; }
 .card-info { padding: 12px 4px 0; }
 .card-info h3 { margin: 0 0 4px; font-family: Manrope; font-size: 15px; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .card-meta { color: var(--muted); font-size: 10px; }
+.review-badge { width: max-content; margin-top: 7px; padding: 4px 7px; display: block; color: #496100; background: #e8f5ba; border-radius: 7px; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
 .pair-row { margin-top: 9px; display: flex; align-items: center; justify-content: space-between; gap: 7px; }
 .pair-name { min-width: 0; color: var(--plum); font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .badges { display: flex; gap: 4px; }
@@ -235,6 +236,15 @@ button, select { cursor: pointer; }
 .detail-main { min-width: 0; }
 .detail-main h2 { margin: 0; font-family: Manrope; font-size: clamp(36px,5vw,59px); line-height: 1; letter-spacing: -.055em; }
 .detail-lead { max-width: 680px; margin: 18px 0 23px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+.review-control { margin: 18px 0; padding: 14px; display: flex; align-items: center; justify-content: space-between; gap: 18px; border: 1px solid var(--line); border-radius: 13px; }
+.review-control.approved { background: #f2f8dd; border-color: #d7e9a4; }
+.review-control.pending { background: #fbf8fa; }
+.review-control span, .review-control small, .review-control strong, .review-control em { display: block; }
+.review-control small { color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; }
+.review-control strong { margin-top: 3px; font-family: Manrope; font-size: 13px; }
+.review-control em { margin-top: 2px; color: var(--muted); font-size: 9px; font-style: normal; }
+.review-control button { padding: 9px 12px; color: white; background: var(--plum); border: 0; border-radius: 9px; font-size: 10px; font-weight: 700; }
+.review-control button:disabled { cursor: wait; opacity: .55; }
 .real-name { margin: 7px 0 20px; color: var(--muted); font-size: 15px; }
 .score-strip { display: grid; grid-template-columns: repeat(4,1fr); border: 1px solid var(--line); border-radius: 14px; }
 .score-strip span { padding: 13px; border-right: 1px solid var(--line); }

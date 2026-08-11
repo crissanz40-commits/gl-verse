@@ -104,7 +104,7 @@ function renderCards() {
         <div class="poster-top"><span class="rank">#${index + 1}</span><button class="save-button ${state.saved.has(item.id) ? "saved" : ""}" type="button" data-save="${item.id}" aria-label="Guardar ${item.title}">${state.saved.has(item.id) ? "♥" : "♡"}</button></div>
         <div class="poster-title"><small>${item.country.toUpperCase()} · ${item.year}</small><strong>${item.title}</strong></div>
       </div>
-      <div class="card-info"><h3>${item.title}</h3><span class="card-meta">${formatReleaseDate(item.releaseDate)} · ${statusLabels[item.status] || item.status}</span><div class="pair-row"><span class="pair-name">♡ ${pairingSummary(item)}</span></div></div>
+      <div class="card-info"><h3>${item.title}</h3><span class="card-meta">${formatReleaseDate(item.releaseDate)} · ${statusLabels[item.status] || item.status}</span>${item.reviewStatus === "approved" ? '<span class="review-badge">✓ Ficha revisada</span>' : ""}<div class="pair-row"><span class="pair-name">♡ ${pairingSummary(item)}</span></div></div>
     </article>`).join("");
   emptyState.hidden = items.length > 0;
   renderActiveFilters();
@@ -189,10 +189,16 @@ function seriesDetail(item) {
   const collectionCards = item.collections.map((collection) => `<div class="metadata-row"><strong>${collection.title}</strong><small>${collection.kind} · parte ${collection.position}</small></div>`).join("");
   const warningCards = item.contentWarnings.map((warning) => `<div class="warning-row ${warning.severity}"><strong>${warning.name}</strong><small>${warning.description || "Sin descripción adicional"}</small></div>`).join("");
   const seasonCards = item.seasons.map((season) => `<details class="season-row"><summary>Temporada ${season.number}${season.title ? ` · ${season.title}` : ""} <small>${season.episodes.length} episodios</small></summary>${season.episodes.map((episode) => `<p><strong>${episode.kind === "special" ? "Especial" : `Episodio ${episode.number}`}</strong><span>${episode.title || "Título pendiente"}${episode.durationMinutes ? ` · ${episode.durationMinutes} min` : ""}</span></p>`).join("")}</details>`).join("");
+  const isApproved = item.reviewStatus === "approved";
+  const reviewDate = item.reviewedAt ? new Date(item.reviewedAt).toLocaleString("es") : "";
+  const reviewControl = `<section class="review-control ${isApproved ? "approved" : "pending"}">
+    <span><small>REVISIÓN EDITORIAL</small><strong>${isApproved ? "Ficha aprobada" : "Pendiente de revisar"}</strong>${reviewDate ? `<em>${reviewDate}</em>` : ""}</span>
+    <button type="button" data-review-series="${item.id}" data-review-status="${isApproved ? "pending" : "approved"}">${isApproved ? "Reabrir revisión" : "Marcar como revisada"}</button>
+  </section>`;
   return `${detailHeader("Ficha de serie")}
     <div class="detail-layout series-layout">
       <aside>${mediaMarkup(item, "cover", `Portada de ${item.title}`)}</aside>
-      <div class="detail-main"><p class="eyebrow">${item.country.toUpperCase()} · ${formatReleaseDate(item.releaseDate).toUpperCase()}</p><h2>${item.title}</h2><p class="detail-lead">${item.synopsis}</p>${item.releaseDateSourceUrl ? `<a class="release-source" href="${item.releaseDateSourceUrl}" target="_blank" rel="noreferrer">Fuente de la fecha de estreno ↗</a>` : ""}
+      <div class="detail-main"><p class="eyebrow">${item.country.toUpperCase()} · ${formatReleaseDate(item.releaseDate).toUpperCase()}</p><h2>${item.title}</h2><p class="detail-lead">${item.synopsis}</p>${item.releaseDateSourceUrl ? `<a class="release-source" href="${item.releaseDateSourceUrl}" target="_blank" rel="noreferrer">Fuente de la fecha de estreno ↗</a>` : ""}${reviewControl}
         <div class="score-strip"><span><small>ESTADO</small><strong>${statusLabels[item.status] || item.status}</strong></span><span><small>ESTRENO</small><strong>${item.year}</strong></span><span><small>PAÍS</small><strong>${item.country}</strong></span><span><small>REPARTO</small><strong>${item.cast.length}</strong></span></div>
         <section class="detail-section"><p class="section-kicker">DÓNDE VER</p><div class="availability-list">${availabilityCards || '<p class="pending-copy">Disponibilidad pendiente de verificar.</p>'}</div></section>
         ${guideCard}
@@ -266,7 +272,32 @@ function resetFilters() {
   renderProviders(); renderCards();
 }
 
-document.addEventListener("click", (event) => {
+async function updateReviewStatus(button) {
+  const item = byId(series, button.dataset.reviewSeries);
+  if (!item) return;
+  button.disabled = true;
+  try {
+    const response = await fetch(`/api/series/${encodeURIComponent(item.id)}/review-status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: button.dataset.reviewStatus }),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const review = await response.json();
+    item.reviewStatus = review.status;
+    item.reviewedAt = review.reviewedAt;
+    renderCards();
+    showDetail("series", item.id, false);
+  } catch (error) {
+    button.disabled = false;
+    window.alert("No se pudo guardar el estado de revisión.");
+    console.error("No se pudo actualizar la revisión", error);
+  }
+}
+
+document.addEventListener("click", async (event) => {
+  const reviewButton = event.target.closest("[data-review-series]");
+  if (reviewButton) { await updateReviewStatus(reviewButton); return; }
   const provider = event.target.closest("[data-provider]");
   if (provider) { state.provider = provider.dataset.provider; renderProviders(); renderCards(); }
   const save = event.target.closest("[data-save]");

@@ -15,6 +15,7 @@ _MIGRATIONS = {
     8: "008_platforms_and_availability.sql",
     9: "009_character_pairings.sql",
     10: "010_extended_catalog.sql",
+    11: "011_series_review_status.sql",
 }
 SCHEMA_VERSION = max(_MIGRATIONS)
 

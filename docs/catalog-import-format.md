@@ -117,6 +117,8 @@ Las colecciones ordenan sus series con `position`; las temporadas son únicas po
 
 `viewing_guides` mantiene separadas dos dimensiones: `drama_level` describe la intensidad dramática general y `ending_type` el resultado emocional del final de la pareja principal. `ending_note` aporta contexto sin reemplazar ninguna de las dos clasificaciones. No debe usarse para datos personales de visionado.
 
+El estado editorial `pending`/`approved` no forma parte del JSON de catálogo. Se gestiona desde la ficha web para que una importación de datos objetivos no pueda aprobar una serie en nombre del usuario.
+
 Los identificadores de trazabilidad de las relaciones se forman así:
 
 - `series_company`: `series_id:company_id:role`.
