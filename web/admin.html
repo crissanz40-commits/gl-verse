@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Backoffice · GL Verse</title>
+    <link rel="stylesheet" href="admin.css?v=20260811-3" />
+  </head>
+  <body>
+    <main class="admin-shell">
+      <section class="login-card" id="login-panel">
+        <span class="logo">GL</span>
+        <p class="kicker">BACKOFFICE</p>
+        <h1>Acceso editorial</h1>
+        <p id="login-description">Inicia sesión con tu cuenta de Google. Solo el rol admin puede editar y aprobar fichas.</p>
+        <div class="google-button" id="google-login"></div>
+        <button class="secondary" id="viewer-logout" type="button" hidden>Cerrar sesión</button>
+        <p class="form-message" id="login-message" role="status"></p>
+      </section>
+
+      <section class="backoffice" id="backoffice" hidden>
+        <header>
+          <div><span class="logo">GL</span><strong>Backoffice</strong></div>
+          <div><img id="session-avatar" alt="" hidden /><span id="session-user"></span><button id="logout-button" class="secondary" type="button">Cerrar sesión</button></div>
+        </header>
+        <div class="workspace">
+          <aside>
+            <label class="search">Buscar serie <input id="admin-search" type="search" /></label>
+            <div class="series-list" id="admin-series-list"></div>
+          </aside>
+          <section class="editor-empty" id="editor-empty">
+            <h2>Selecciona una ficha</h2><p>Podrás editar sus campos, registrar la fuente y aprobarla.</p>
+          </section>
+          <form class="editor" id="series-form" hidden>
+            <div class="editor-heading">
+              <div><p class="kicker">FICHA EDITORIAL</p><h2 id="editor-title"></h2><span id="editor-id"></span></div>
+              <span class="status-pill" id="review-status"></span>
+            </div>
+            <div class="field-grid">
+              <label>Título <input name="title" required /></label>
+              <label>Título original <input name="originalTitle" /></label>
+              <label>País <input name="country" required /></label>
+              <label>Año <input name="releaseYear" type="number" min="1900" required /></label>
+              <label>Fecha de estreno <input name="releaseDate" type="date" /></label>
+              <label>Estado
+                <select name="status"><option value="announced">Anunciada</option><option value="airing">En emisión</option><option value="completed">Completada</option><option value="cancelled">Cancelada</option></select>
+              </label>
+              <label class="wide">Sinopsis <textarea name="synopsis" rows="5"></textarea></label>
+              <label class="wide">URL directa de portada <input name="coverImageUrl" type="url" /></label>
+              <label class="wide">Página fuente de portada <input name="coverImageSourceUrl" type="url" /></label>
+              <label>Drama
+                <select name="dramaLevel"><option value="">Sin clasificar</option><option value="zero_drama">0 · Sin drama</option><option value="light">1 · Ligero</option><option value="moderate">2 · Moderado</option><option value="high">3 · Alto</option></select>
+              </label>
+              <label>Final
+                <select name="endingType"><option value="">Sin clasificar</option><option value="happy_ever_after">Feliz para siempre</option><option value="happy_for_now">Feliz por ahora</option><option value="bittersweet">Agridulce</option><option value="open">Abierto</option><option value="sad">Triste</option><option value="tragic">Trágico</option><option value="unknown">Desconocido</option></select>
+              </label>
+              <label class="wide">Nota del final <input name="endingNote" /></label>
+            </div>
+            <fieldset>
+              <legend>Fuente obligatoria para guardar cambios</legend>
+              <div class="field-grid">
+                <label>Título de la fuente <input name="sourceTitle" /></label>
+                <label>URL <input name="sourceUrl" type="url" /></label>
+                <label>Tipo <select name="sourceType"><option value="official">Oficial</option><option value="platform">Plataforma</option><option value="press">Prensa</option><option value="interview">Entrevista</option><option value="database">Base de datos</option><option value="community">Comunidad</option></select></label>
+                <label>Comprobación <select name="verificationStatus"><option value="verified">Verificada</option><option value="corroborated">Corroborada</option><option value="unverified">Sin verificar</option><option value="conflicting">Conflictiva</option></select></label>
+                <label class="wide">Responsable o medio <input name="publisher" /></label>
+              </div>
+            </fieldset>
+            <div class="editor-actions">
+              <p class="form-message" id="editor-message" role="status"></p>
+              <button class="secondary" id="review-button" type="button"></button>
+              <button type="submit">Guardar cambios</button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </main>
+    <script src="admin.js?v=20260811-5"></script>
+  </body>
+</html>

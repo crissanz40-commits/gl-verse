@@ -176,37 +176,7 @@ def test_web_server_serves_static_frontend_and_catalog_api(tmp_path) -> None:
     assert page == "<h1>GL Verse</h1>"
 
 
-def test_web_server_updates_series_review_status(tmp_path) -> None:
-    database_path = tmp_path / "catalog.db"
-    server = create_web_server(database_path, port=0, web_root=tmp_path)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-
-    try:
-        base_url = f"http://127.0.0.1:{server.server_port}"
-        request = Request(
-            f"{base_url}/api/series/gap-2022/review-status",
-            data=json.dumps({"status": "approved"}).encode(),
-            headers={"Content-Type": "application/json"},
-            method="PUT",
-        )
-        with urlopen(request) as response:
-            review = json.load(response)
-        with urlopen(f"{base_url}/api/catalog") as response:
-            payload = json.load(response)
-    finally:
-        server.shutdown()
-        server.server_close()
-        thread.join()
-
-    gap = next(item for item in payload["series"] if item["id"] == "gap-2022")
-    assert review["seriesId"] == "gap-2022"
-    assert review["status"] == "approved"
-    assert review["reviewedAt"] is not None
-    assert gap["reviewStatus"] == "approved"
-
-
-def test_web_server_rejects_invalid_review_status(tmp_path) -> None:
+def test_public_api_cannot_update_review_status(tmp_path) -> None:
     server = create_web_server(tmp_path / "catalog.db", port=0, web_root=tmp_path)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -214,7 +184,7 @@ def test_web_server_rejects_invalid_review_status(tmp_path) -> None:
     try:
         request = Request(
             f"http://127.0.0.1:{server.server_port}/api/series/gap-2022/review-status",
-            data=json.dumps({"status": "unknown"}).encode(),
+            data=json.dumps({"status": "approved"}).encode(),
             headers={"Content-Type": "application/json"},
             method="PUT",
         )
@@ -225,4 +195,4 @@ def test_web_server_rejects_invalid_review_status(tmp_path) -> None:
         server.server_close()
         thread.join()
 
-    assert error.value.code == 400
+    assert error.value.code == 404

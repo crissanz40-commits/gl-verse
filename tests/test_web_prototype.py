@@ -7,6 +7,27 @@ def test_web_prototype_has_all_static_assets() -> None:
     assert (WEB_ROOT / "index.html").is_file()
     assert (WEB_ROOT / "styles.css").is_file()
     assert (WEB_ROOT / "app.js").is_file()
+    assert (WEB_ROOT / "admin.html").is_file()
+    assert (WEB_ROOT / "admin.css").is_file()
+    assert (WEB_ROOT / "admin.js").is_file()
+
+
+def test_admin_prototype_uses_authenticated_api() -> None:
+    html = (WEB_ROOT / "admin.html").read_text(encoding="utf-8")
+    javascript = (WEB_ROOT / "admin.js").read_text(encoding="utf-8")
+    stylesheet = (WEB_ROOT / "admin.css").read_text(encoding="utf-8")
+
+    assert 'id="google-login"' in html
+    assert "[hidden] { display:none !important; }" in stylesheet
+    assert 'id="series-form"' in html
+    assert "/api/auth/google/start" in javascript
+    assert "accounts.google.com/gsi/client" in javascript
+    assert "/api/auth/session" in javascript
+    assert 'credentials: "same-origin"' in javascript
+    assert "window.sessionStorage" in javascript
+    assert "Authorization" in javascript
+    assert "X-GL-Verse-CSRF" in javascript
+    assert "/review-status" in javascript
 
 
 def test_web_prototype_exposes_catalog_controls() -> None:
@@ -25,7 +46,7 @@ def test_web_prototype_exposes_catalog_controls() -> None:
     assert 'id="provider-list"' in html
     assert 'value="score" disabled' in html
     assert 'id="detail-dialog"' in html
-    assert 'src="app.js"' in html
+    assert 'src="app.js' in html
     assert 'href="styles.css"' in html
 
 
@@ -57,9 +78,7 @@ def test_web_prototype_loads_relational_catalog_from_api() -> None:
     assert "item.collections.map" in javascript
     assert "item.seasons.map" in javascript
     assert "item.reviewStatus" in javascript
-    assert 'data-review-series="${item.id}"' in javascript
-    assert 'method: "PUT"' in javascript
-    assert "/review-status" in javascript
+    assert 'class="review-badge"' in javascript
 
 
 def test_web_prototype_does_not_duplicate_catalog_data() -> None:

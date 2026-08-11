@@ -27,7 +27,7 @@ Actualmente, GL Verse utiliza `gl-verse importar-series` para ampliar el catálo
 
 - Consultar `series_review_status` antes de auditar o preparar una carga. Si una serie está `approved`, omitirla e informar de que ya fue aceptada editorialmente, salvo que el usuario pida expresamente revisarla, corregirla o reabrirla.
 - Tratar `pending` y la ausencia de registro como pendientes de revisión. El estado editorial no demuestra que un dato sea verdadero y no sustituye fuentes ni procedencia.
-- No cambiar una ficha `approved` durante una carga rutinaria. Para corregirla, confirmar el alcance solicitado y devolverla primero a `pending`, ya sea desde la web o mediante el mecanismo vigente.
+- No cambiar una ficha `approved` durante una carga rutinaria. Para corregirla, confirmar el alcance solicitado y devolverla primero a `pending` desde el backoffice con una cuenta Google de rol `admin`; una cuenta `viewer` nunca autoriza cambios.
 - Identificar las series y los datos solicitados.
 - Distinguir datos objetivos, disponibilidad por territorio y valoraciones subjetivas.
 - Si se pide «completar» sin enumerar campos, auditar todas las dimensiones de la matriz de cobertura y cargar solo las que sean aplicables y verificables.
@@ -123,7 +123,7 @@ No declarar una comprobación como superada si no se ha ejecutado.
 
 ### 10. Entregar el resultado
 
-- No marcar automáticamente una serie como `approved` tras importarla. Esa decisión corresponde al usuario después de revisar la ficha en la web.
+- No marcar automáticamente una serie como `approved` tras importarla. Esa decisión corresponde a una cuenta Google de rol `admin` desde el backoffice después de revisar la ficha. Una edición objetiva realizada allí debe incluir fuente, conservar su auditoría ligada al identificador estable de Google y devolver la ficha a `pending`.
 - Para una importación ordinaria, no crear una rama ni un pull request: resumir las entidades añadidas, las fuentes consultadas y el resultado del importador.
 - Si hubo que cambiar código o esquema, trabajar en una rama dedicada y preparar un pull request revisable, en borrador salvo indicación contraria.
 - No mezclar refactorizaciones ni cambios funcionales ajenos a la carga.

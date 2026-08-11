@@ -31,6 +31,20 @@ gl-verse web --database data/gl_verse.db --host 127.0.0.1 --port 8080
 
 `GET /api/health` permite comprobar que el proceso está activo. Las valoraciones personales y las guías de visionado siguen separadas del catálogo objetivo; sus filtros se activarán cuando esas capas estén persistidas.
 
+### Acceso con Google y backoffice
+
+GL Verse usa Google OpenID Connect. La identidad se guarda mediante el identificador estable `sub` de Google y cada cuenta tiene rol `admin` o `viewer`. Los correos incluidos en `GL_VERSE_ADMIN_EMAILS` se promocionan a admin en su primer acceso; cualquier otra cuenta entra como viewer. Un admin ya persistido no se degrada si cambia esa variable.
+
+En Google Cloud crea un cliente OAuth 2.0 de tipo aplicación web y registra `http://127.0.0.1:8000` como origen JavaScript autorizado. GL Verse usa Google Identity Services para recibir y validar un ID token, por lo que no necesita ni almacena Client Secret, access tokens o refresh tokens. Antes de iniciar la aplicación, configura en PowerShell:
+
+```powershell
+$env:GL_VERSE_GOOGLE_CLIENT_ID="tu-client-id.apps.googleusercontent.com"
+$env:GL_VERSE_ADMIN_EMAILS="tu-correo@gmail.com"
+gl-verse web
+```
+
+Abre `http://127.0.0.1:8000` y pulsa «Entrar con Google». Solo un admin verá y podrá usar `http://127.0.0.1:8000/admin.html`; los viewers conservan acceso de lectura al catálogo. GL Verse no almacena contraseñas ni tokens de Google: crea una sesión local de ocho horas. Toda edición objetiva exige una fuente, queda ligada al `sub` del admin en el historial y devuelve la ficha a pendiente antes de poder aprobarla otra vez.
+
 ## Migraciones SQLite
 
 La persistencia utiliza migraciones SQL numeradas:
@@ -46,6 +60,8 @@ La persistencia utiliza migraciones SQL numeradas:
 - `009_character_pairings.sql`: desacopla las parejas ficticias de las parejas artísticas.
 - `010_extended_catalog.sql`: persiste empresas, colecciones, episodios, etiquetas, advertencias y guías de visionado.
 - `011_series_review_status.sql`: guarda la aprobación editorial manual de cada ficha sin mezclarla con el estado de emisión.
+- `012_admin_backoffice.sql`: introduce la base del backoffice y su historial editorial.
+- `013_google_identity_roles.sql`: sustituye las credenciales locales por identidades Google con roles `admin` y `viewer`.
 
 Una base nueva ejecuta todas las migraciones en orden. Una base existente aplica únicamente las versiones pendientes.
 

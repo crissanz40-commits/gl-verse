@@ -18,6 +18,90 @@ const resultCount = document.querySelector("#result-count");
 const activeFilters = document.querySelector("#active-filters");
 const emptyState = document.querySelector("#empty-state");
 const dialog = document.querySelector("#detail-dialog");
+const sessionStorageKey = "glv_session";
+
+function sessionHeaders(headers = {}) {
+  const sessionToken = window.sessionStorage.getItem(sessionStorageKey);
+  return { ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}), ...headers };
+}
+
+async function loadIdentity() {
+  try {
+    const response = await fetch("/api/auth/session", { headers: sessionHeaders() });
+    const session = await response.json();
+    const login = document.querySelector("#google-login");
+    if (!session.googleConfigured) {
+      login.hidden = true;
+      return;
+    }
+    if (!session.authenticated) {
+      await setupGoogleLogin(login);
+      return;
+    }
+    const logout = document.createElement("a");
+    logout.href = "#logout";
+    logout.textContent = `Salir · ${session.user.name || session.user.email}`;
+    logout.addEventListener("click", async (event) => {
+      event.preventDefault();
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: sessionHeaders({ "Content-Type": "application/json", "X-GL-Verse-CSRF": session.csrfToken }),
+        body: "{}",
+      });
+      window.sessionStorage.removeItem(sessionStorageKey);
+      window.location.reload();
+    });
+    login.replaceChildren(logout);
+    document.querySelector("#admin-link").hidden = session.user.role !== "admin";
+  } catch {
+    // El catálogo público sigue disponible aunque falle la sesión.
+  }
+}
+
+function loadGoogleLibrary() {
+  if (window.google?.accounts?.id) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error("No se pudo cargar Google Identity Services"));
+    document.head.append(script);
+  });
+}
+
+async function finishGoogleLogin(credential, config) {
+  const response = await fetch("/api/auth/google", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ credential, loginCsrf: config.loginCsrf }),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "No se pudo iniciar sesión con Google");
+  return result;
+}
+
+async function setupGoogleLogin(container) {
+  const response = await fetch("/api/auth/google/start?next=/");
+  if (!response.ok) throw new Error("Google no está configurado");
+  const config = await response.json();
+  await loadGoogleLibrary();
+  window.google.accounts.id.initialize({
+    client_id: config.clientId,
+    nonce: config.nonce,
+    callback: async ({ credential }) => {
+      try {
+        const result = await finishGoogleLogin(credential, config);
+        window.sessionStorage.setItem(sessionStorageKey, result.sessionToken);
+        window.location.replace(result.nextPath);
+      } catch (error) {
+        container.textContent = error.message;
+      }
+    },
+  });
+  window.google.accounts.id.renderButton(container, { theme: "outline", size: "medium" });
+}
 
 const byId = (items, id) => items.find((item) => item.id === id);
 const pairingsForSeries = (seriesId) => seriesPairings.filter((pairing) => pairing.seriesId === seriesId);
@@ -189,16 +273,10 @@ function seriesDetail(item) {
   const collectionCards = item.collections.map((collection) => `<div class="metadata-row"><strong>${collection.title}</strong><small>${collection.kind} · parte ${collection.position}</small></div>`).join("");
   const warningCards = item.contentWarnings.map((warning) => `<div class="warning-row ${warning.severity}"><strong>${warning.name}</strong><small>${warning.description || "Sin descripción adicional"}</small></div>`).join("");
   const seasonCards = item.seasons.map((season) => `<details class="season-row"><summary>Temporada ${season.number}${season.title ? ` · ${season.title}` : ""} <small>${season.episodes.length} episodios</small></summary>${season.episodes.map((episode) => `<p><strong>${episode.kind === "special" ? "Especial" : `Episodio ${episode.number}`}</strong><span>${episode.title || "Título pendiente"}${episode.durationMinutes ? ` · ${episode.durationMinutes} min` : ""}</span></p>`).join("")}</details>`).join("");
-  const isApproved = item.reviewStatus === "approved";
-  const reviewDate = item.reviewedAt ? new Date(item.reviewedAt).toLocaleString("es") : "";
-  const reviewControl = `<section class="review-control ${isApproved ? "approved" : "pending"}">
-    <span><small>REVISIÓN EDITORIAL</small><strong>${isApproved ? "Ficha aprobada" : "Pendiente de revisar"}</strong>${reviewDate ? `<em>${reviewDate}</em>` : ""}</span>
-    <button type="button" data-review-series="${item.id}" data-review-status="${isApproved ? "pending" : "approved"}">${isApproved ? "Reabrir revisión" : "Marcar como revisada"}</button>
-  </section>`;
   return `${detailHeader("Ficha de serie")}
     <div class="detail-layout series-layout">
       <aside>${mediaMarkup(item, "cover", `Portada de ${item.title}`)}</aside>
-      <div class="detail-main"><p class="eyebrow">${item.country.toUpperCase()} · ${formatReleaseDate(item.releaseDate).toUpperCase()}</p><h2>${item.title}</h2><p class="detail-lead">${item.synopsis}</p>${item.releaseDateSourceUrl ? `<a class="release-source" href="${item.releaseDateSourceUrl}" target="_blank" rel="noreferrer">Fuente de la fecha de estreno ↗</a>` : ""}${reviewControl}
+      <div class="detail-main"><p class="eyebrow">${item.country.toUpperCase()} · ${formatReleaseDate(item.releaseDate).toUpperCase()}</p><h2>${item.title}</h2><p class="detail-lead">${item.synopsis}</p>${item.releaseDateSourceUrl ? `<a class="release-source" href="${item.releaseDateSourceUrl}" target="_blank" rel="noreferrer">Fuente de la fecha de estreno ↗</a>` : ""}
         <div class="score-strip"><span><small>ESTADO</small><strong>${statusLabels[item.status] || item.status}</strong></span><span><small>ESTRENO</small><strong>${item.year}</strong></span><span><small>PAÍS</small><strong>${item.country}</strong></span><span><small>REPARTO</small><strong>${item.cast.length}</strong></span></div>
         <section class="detail-section"><p class="section-kicker">DÓNDE VER</p><div class="availability-list">${availabilityCards || '<p class="pending-copy">Disponibilidad pendiente de verificar.</p>'}</div></section>
         ${guideCard}
@@ -272,32 +350,7 @@ function resetFilters() {
   renderProviders(); renderCards();
 }
 
-async function updateReviewStatus(button) {
-  const item = byId(series, button.dataset.reviewSeries);
-  if (!item) return;
-  button.disabled = true;
-  try {
-    const response = await fetch(`/api/series/${encodeURIComponent(item.id)}/review-status`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: button.dataset.reviewStatus }),
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const review = await response.json();
-    item.reviewStatus = review.status;
-    item.reviewedAt = review.reviewedAt;
-    renderCards();
-    showDetail("series", item.id, false);
-  } catch (error) {
-    button.disabled = false;
-    window.alert("No se pudo guardar el estado de revisión.");
-    console.error("No se pudo actualizar la revisión", error);
-  }
-}
-
-document.addEventListener("click", async (event) => {
-  const reviewButton = event.target.closest("[data-review-series]");
-  if (reviewButton) { await updateReviewStatus(reviewButton); return; }
+document.addEventListener("click", (event) => {
   const provider = event.target.closest("[data-provider]");
   if (provider) { state.provider = provider.dataset.provider; renderProviders(); renderCards(); }
   const save = event.target.closest("[data-save]");
@@ -368,4 +421,5 @@ async function loadCatalog() {
   }
 }
 
+loadIdentity();
 loadCatalog();
