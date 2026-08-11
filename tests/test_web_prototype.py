@@ -6,6 +6,7 @@ WEB_ROOT = Path(__file__).parents[1] / "web"
 def test_web_prototype_has_all_static_assets() -> None:
     assert (WEB_ROOT / "index.html").is_file()
     assert (WEB_ROOT / "styles.css").is_file()
+    assert (WEB_ROOT / "catalog-filters.js").is_file()
     assert (WEB_ROOT / "app.js").is_file()
     assert (WEB_ROOT / "admin.html").is_file()
     assert (WEB_ROOT / "admin.css").is_file()
@@ -44,6 +45,8 @@ def test_web_prototype_exposes_catalog_controls() -> None:
     assert 'id="tag-fieldset" hidden' in html
     assert 'id="comfort-box" hidden' in html
     assert 'id="provider-list"' in html
+    assert 'name="pairing"' not in html
+    assert "catalog-filters.js" in html
     assert 'value="score" disabled' in html
     assert 'id="detail-dialog"' in html
     assert 'src="app.js' in html
@@ -60,6 +63,10 @@ def test_web_prototype_loads_relational_catalog_from_api() -> None:
     assert "series = payload.series" in javascript
     assert "...payload.platforms.map" in javascript
     assert "item.availability.some" in javascript
+    assert "visibleSeries({ ignoreProvider: true })" in javascript
+    assert "GLVerseCatalogFilters.providersForSeries" in javascript
+    assert "state.pairings" not in javascript
+    assert 'input[name=pairing]' not in javascript
     assert 'class="availability-row"' in javascript
     assert 'showDetail("series"' in javascript
     assert 'data-open="pair:' in javascript
