@@ -31,6 +31,16 @@ gl-verse web --database data/gl_verse.db --host 127.0.0.1 --port 8080
 
 `GET /api/health` permite comprobar que el proceso está activo. Las valoraciones personales y las guías de visionado siguen separadas del catálogo objetivo; sus filtros se activarán cuando esas capas estén persistidas.
 
+### Backoffice local
+
+El acceso administrativo se limita a conexiones desde `127.0.0.1`. Crea el primer usuario mediante un prompt que no muestra ni guarda la contraseña en claro:
+
+```bash
+gl-verse crear-admin cris
+```
+
+Después inicia la web y abre `http://127.0.0.1:8000/admin.html`. Las contraseñas se guardan con PBKDF2-HMAC-SHA256 y sal aleatoria; las sesiones duran ocho horas o hasta reiniciar el servidor. Cualquier edición objetiva exige una fuente, queda en el historial administrativo y devuelve la ficha a pendiente antes de poder aprobarla otra vez.
+
 ## Migraciones SQLite
 
 La persistencia utiliza migraciones SQL numeradas:
@@ -46,6 +56,7 @@ La persistencia utiliza migraciones SQL numeradas:
 - `009_character_pairings.sql`: desacopla las parejas ficticias de las parejas artísticas.
 - `010_extended_catalog.sql`: persiste empresas, colecciones, episodios, etiquetas, advertencias y guías de visionado.
 - `011_series_review_status.sql`: guarda la aprobación editorial manual de cada ficha sin mezclarla con el estado de emisión.
+- `012_admin_backoffice.sql`: persiste administradores locales y el historial de cambios editoriales.
 
 Una base nueva ejecuta todas las migraciones en orden. Una base existente aplica únicamente las versiones pendientes.
 
