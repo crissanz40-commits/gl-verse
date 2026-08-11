@@ -70,6 +70,22 @@ def test_catalog_payload_exposes_availability_by_territory() -> None:
     connection.close()
 
 
+def test_catalog_payload_exposes_character_pairing_without_acting_pair() -> None:
+    connection = connect_database(":memory:")
+    initialize_database(connection)
+    connection.execute(
+        "UPDATE series_pairings SET acting_pair_id = NULL WHERE id = ?",
+        ("sam-mon-gap",),
+    )
+
+    payload = catalog_payload(connection)
+
+    gap_pairing = next(item for item in payload["seriesPairings"] if item["seriesId"] == "gap-2022")
+    assert gap_pairing["pairId"] is None
+    assert set(gap_pairing["characters"]) == {"Sam", "Mon"}
+    connection.close()
+
+
 def test_web_server_serves_static_frontend_and_catalog_api(tmp_path) -> None:
     database_path = tmp_path / "catalog.db"
     web_root = tmp_path / "web"

@@ -92,6 +92,17 @@ def test_acting_pair_is_connected_to_its_work_in_a_series() -> None:
     assert series_pairing.series_id == "gap-2022"
 
 
+def test_character_pairing_does_not_require_an_acting_pair() -> None:
+    series_pairing = SeriesPairing(
+        id="mhom-ped-sawan-pairing",
+        series_id="mhom-ped-sawan-2024",
+        character_ids=("mhom-ped", "srinuan"),
+        role=PairingRole.MAIN,
+    )
+
+    assert series_pairing.acting_pair_id is None
+
+
 def test_a_pair_cannot_repeat_the_same_member() -> None:
     with pytest.raises(ValueError, match="distintos"):
         ActingPair(

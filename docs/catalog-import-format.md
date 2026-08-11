@@ -67,13 +67,15 @@ El documento debe ser JSON UTF-8, declarar `format_version: 1` y utilizar única
 | `characters` | `id`, `name`, `series_id` | — |
 | `credits` | `series_id`, `person_id`, `role` | `character_id`, `cast_importance` |
 | `acting_pairs` | `id`, `name`, `person_ids` | `active_since`, `image_url`, `image_source_url` |
-| `series_pairings` | `id`, `series_id`, `acting_pair_id`, `character_ids`, `role` | — |
+| `series_pairings` | `id`, `series_id`, `character_ids`, `role` | `acting_pair_id` |
 | `platforms` | `id`, `name` | `website_url` |
 | `availability` | `series_id`, `platform_id`, `territory`, `access_model`, `official_url` | `subtitle_languages` |
 | `sources` | `id`, `title`, `url`, `source_type` | `publisher`, `published_on` |
 | `provenance` | `source_id`, `entity_type`, `entity_id`, `field_name`, `checked_on`, `status` | `note` |
 
 `person_ids` y `character_ids` contienen exactamente dos identificadores. Las imágenes siempre deben incluir tanto su URL directa como la página que acredita su procedencia.
+
+`series_pairings` representa ante todo la pareja ficticia de dos personajes dentro de una serie. `acting_pair_id` solo se incluye cuando también existe una pareja artística verificada entre sus intérpretes. Los documentos anteriores que ya lo incluyen siguen siendo compatibles. Una carga posterior puede completar este vínculo si estaba vacío, pero no sustituir uno ya guardado. La combinación de serie y personajes es única con independencia del orden de `character_ids`.
 
 Cada disponibilidad es única por serie, plataforma y territorio. `territory` usa `GLOBAL` o un código ISO de país de dos letras en mayúsculas, por ejemplo `ES`, `TH` o `US`. Una carga posterior puede añadir idiomas de subtítulos, pero cambiar el modelo de acceso o la URL oficial de una disponibilidad existente se considera un conflicto. Para su trazabilidad, `provenance.entity_id` se forma como `series_id:platform_id:territory`.
 

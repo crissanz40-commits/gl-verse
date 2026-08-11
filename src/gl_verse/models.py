@@ -179,16 +179,17 @@ class ActingPair:
 
 @dataclass(frozen=True, slots=True)
 class SeriesPairing:
-    """Representa el trabajo de una pareja artística dentro de una serie."""
+    """Representa una pareja ficticia y su posible pareja artística."""
 
     id: str
     series_id: str
-    acting_pair_id: str
     character_ids: tuple[str, str]
+    acting_pair_id: str | None = None
     role: PairingRole = PairingRole.MAIN
 
     def __post_init__(self) -> None:
         _require_text(self.id, "El identificador")
         _require_text(self.series_id, "El identificador de la serie")
-        _require_text(self.acting_pair_id, "El identificador de la pareja artística")
+        if self.acting_pair_id is not None:
+            _require_text(self.acting_pair_id, "El identificador de la pareja artística")
         _require_distinct_pair(self.character_ids, "La pareja ficticia")
