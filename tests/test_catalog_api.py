@@ -86,6 +86,51 @@ def test_catalog_payload_exposes_character_pairing_without_acting_pair() -> None
     connection.close()
 
 
+def test_catalog_payload_exposes_extended_catalog() -> None:
+    connection = connect_database(":memory:")
+    initialize_database(connection)
+    connection.executescript(
+        """
+        INSERT INTO companies (id, name) VALUES ('studio', 'Studio');
+        INSERT INTO series_companies VALUES ('gap-2022', 'studio', 'producer');
+        INSERT INTO collections (id, title, kind) VALUES ('universe', 'Universe', 'franchise');
+        INSERT INTO collection_entries VALUES ('universe', 'gap-2022', 1);
+        INSERT INTO seasons (id, series_id, number) VALUES ('gap-s1', 'gap-2022', 1);
+        INSERT INTO episodes (
+            id, season_id, number, title, kind, air_date, duration_minutes
+        ) VALUES ('gap-e1', 'gap-s1', 1, 'Episode 1', 'regular', '2022-11-19', 55);
+        INSERT INTO tags (id, name, category) VALUES ('romance', 'Romance', 'genre');
+        INSERT INTO series_tags VALUES ('gap-2022', 'romance');
+        INSERT INTO content_warnings (id, name) VALUES ('warning', 'Warning');
+        INSERT INTO series_content_warnings VALUES ('gap-2022', 'warning', 'low');
+        INSERT INTO viewing_guides VALUES (
+            'gap-2022', 'light', 'happy_ever_after', 'Verified note'
+        );
+        """
+    )
+
+    payload = catalog_payload(connection)
+    gap = next(item for item in payload["series"] if item["id"] == "gap-2022")
+
+    assert payload["companies"][0]["id"] == "studio"
+    assert payload["collections"][0]["entries"] == [
+        {"seriesId": "gap-2022", "position": 1}
+    ]
+    assert payload["tags"] == [{"id": "romance", "name": "Romance", "category": "genre"}]
+    assert payload["contentWarnings"][0]["id"] == "warning"
+    assert gap["companies"][0]["role"] == "producer"
+    assert gap["collections"][0]["position"] == 1
+    assert gap["seasons"][0]["episodes"][0]["durationMinutes"] == 55
+    assert gap["tags"][0]["name"] == "Romance"
+    assert gap["contentWarnings"][0]["severity"] == "low"
+    assert gap["viewingGuide"] == {
+        "dramaLevel": "light",
+        "endingType": "happy_ever_after",
+        "endingNote": "Verified note",
+    }
+    connection.close()
+
+
 def test_web_server_serves_static_frontend_and_catalog_api(tmp_path) -> None:
     database_path = tmp_path / "catalog.db"
     web_root = tmp_path / "web"

@@ -18,6 +18,10 @@ def test_web_prototype_exposes_catalog_controls() -> None:
     assert 'id="actress-grid"' in html
     assert 'id="release-month-filter"' in html
     assert 'id="release-year-filter"' in html
+    assert 'id="drama-fieldset" hidden' in html
+    assert 'id="ending-fieldset" hidden' in html
+    assert 'id="tag-fieldset" hidden' in html
+    assert 'id="comfort-box" hidden' in html
     assert 'id="provider-list"' in html
     assert 'value="score" disabled' in html
     assert 'id="detail-dialog"' in html
@@ -43,6 +47,15 @@ def test_web_prototype_loads_relational_catalog_from_api() -> None:
     assert "Sin pareja en esta serie" in javascript
     assert "pairing.characters.includes(credit.character)" in javascript
     assert "pair?.name" in javascript
+    assert "item.viewingGuide" in javascript
+    assert 'guide.dramaLevel === "zero_drama"' in javascript
+    assert 'document.querySelector("#drama-fieldset").hidden = !hasViewingGuides' in javascript
+    assert 'document.querySelector("#tag-fieldset").hidden = payload.tags.length === 0' in javascript
+    assert "item.tags.some" in javascript
+    assert "item.contentWarnings.map" in javascript
+    assert "item.companies.map" in javascript
+    assert "item.collections.map" in javascript
+    assert "item.seasons.map" in javascript
 
 
 def test_web_prototype_does_not_duplicate_catalog_data() -> None:

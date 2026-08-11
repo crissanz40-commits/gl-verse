@@ -215,6 +215,19 @@ button, select { cursor: pointer; }
 .availability-row small { margin-top: 3px; color: var(--muted); font-size: 9px; }
 .availability-row em { color: var(--plum); font-size: 9px; font-style: normal; }
 .pending-copy { padding: 14px; color: var(--muted); font-size: 11px; }
+.metadata-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.metadata-grid > span, .metadata-row, .warning-row { padding: 12px; background: #fbf8fa; border: 1px solid var(--line); border-radius: 11px; }
+.metadata-grid small, .metadata-row small, .warning-row small { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
+.metadata-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.metadata-chip { padding: 6px 10px; color: var(--plum); background: var(--pink-soft); border-radius: 99px; font-size: 10px; font-weight: 700; }
+.metadata-list { display: grid; gap: 8px; }
+.warning-row.high { border-left: 4px solid #a33d61; }
+.warning-row.medium { border-left: 4px solid #d18846; }
+.warning-row.low { border-left: 4px solid #73915c; }
+.season-row { padding: 12px; background: #fbf8fa; border: 1px solid var(--line); border-radius: 11px; }
+.season-row summary { cursor: pointer; font-weight: 700; }
+.season-row summary small { margin-left: 7px; color: var(--muted); font-weight: 500; }
+.season-row p { padding: 9px 0 0 12px; display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 10px; }
 .detail-toolbar { min-height: 58px; padding: 0 64px 0 24px; display: flex; align-items: center; justify-content: space-between; color: var(--muted); border-bottom: 1px solid var(--line); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .detail-toolbar button { padding: 8px 10px; color: var(--plum); background: var(--pink-soft); border: 0; border-radius: 9px; font-size: 10px; font-weight: 700; letter-spacing: 0; text-transform: none; }
 .detail-layout { padding: 34px; display: grid; grid-template-columns: minmax(220px,300px) minmax(0,1fr); gap: 38px; }

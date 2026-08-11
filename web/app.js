@@ -8,7 +8,11 @@ const importanceLabels = { lead: "Protagonista", supporting: "Secundaria", guest
 const roleLabels = { main: "Pareja principal", supporting: "Pareja secundaria" };
 const statusLabels = { announced: "Anunciada", airing: "En emisión", completed: "Completada", cancelled: "Cancelada" };
 const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-const state = { search: "", provider: "", pairings: [], country: "", releaseMonth: "", releaseYear: "", sort: "newest", saved: new Set(), detailTrail: [] };
+const dramaLevels = ["zero_drama", "light", "moderate", "high"];
+const dramaLabels = { zero_drama: "Sin drama", light: "Suave", moderate: "Moderado", high: "Alto" };
+const endingLabels = { happy_ever_after: "Feliz para siempre", happy_for_now: "Feliz por ahora", bittersweet: "Agridulce", open: "Abierto", sad: "Triste", tragic: "Trágico", unknown: "Sin confirmar" };
+const companyRoleLabels = { producer: "Producción", broadcaster: "Emisión", distributor: "Distribución" };
+const state = { search: "", provider: "", pairings: [], country: "", releaseMonth: "", releaseYear: "", drama: 3, endings: [], comfort: false, tag: "", sort: "newest", saved: new Set(), detailTrail: [] };
 const grid = document.querySelector("#series-grid");
 const resultCount = document.querySelector("#result-count");
 const activeFilters = document.querySelector("#active-filters");
@@ -72,12 +76,18 @@ function visibleSeries() {
     const searchable = `${item.title} ${pairingSummary(item)} ${actressNames}`.toLocaleLowerCase("es");
     const roles = pairingsForSeries(item.id).map((pairing) => pairing.role);
     const [releaseYear, releaseMonth] = releaseParts(item);
+    const guide = item.viewingGuide;
+    const endingGroup = guide && (["happy_ever_after", "happy_for_now"].includes(guide.endingType) ? "happy" : ["sad", "tragic"].includes(guide.endingType) ? "sad" : guide.endingType);
     return (!term || searchable.includes(term))
       && (!state.pairings.length || state.pairings.some((role) => roles.includes(role)))
       && (!state.provider || item.availability.some((entry) => entry.platformId === state.provider))
       && (!state.country || item.country === state.country)
       && (!state.releaseMonth || releaseMonth === state.releaseMonth.padStart(2, "0"))
-      && (!state.releaseYear || releaseYear === state.releaseYear);
+      && (!state.releaseYear || releaseYear === state.releaseYear)
+      && (state.drama === 3 || (guide && dramaLevels.indexOf(guide.dramaLevel) <= state.drama))
+      && (!state.endings.length || (guide && state.endings.includes(endingGroup)))
+      && (!state.comfort || (guide && guide.dramaLevel === "zero_drama" && ["happy_ever_after", "happy_for_now"].includes(guide.endingType)))
+      && (!state.tag || item.tags.some((tag) => tag.id === state.tag));
   }).sort((a, b) => {
     if (state.sort === "title") return a.title.localeCompare(b.title, "es");
     return (b.releaseDate || `${b.year}`).localeCompare(a.releaseDate || `${a.year}`);
@@ -128,6 +138,10 @@ function renderActiveFilters() {
   if (state.country) chips.push([state.country, "country"]);
   if (state.releaseMonth) chips.push([monthNames[Number(state.releaseMonth) - 1], "releaseMonth"]);
   if (state.releaseYear) chips.push([`Estreno ${state.releaseYear}`, "releaseYear"]);
+  if (state.drama < 3) chips.push([`Drama: hasta ${dramaLabels[dramaLevels[state.drama]]}`, "drama"]);
+  state.endings.forEach((value) => chips.push([`Final: ${value}`, `ending:${value}`]));
+  if (state.comfort) chips.push(["Modo confort", "comfort"]);
+  if (state.tag) chips.push([series.flatMap((item) => item.tags).find((tag) => tag.id === state.tag)?.name || state.tag, "tag"]);
   activeFilters.innerHTML = chips.map(([label, key]) => `<button class="filter-chip" type="button" data-remove-filter="${key}">${label}</button>`).join("");
 }
 
@@ -168,12 +182,25 @@ function seriesDetail(item) {
       <span><strong>${entry.platformName}</strong><small>${entry.territory} · ${accessLabels[entry.accessModel] || entry.accessModel}${subtitles}</small></span><em>Ver ↗</em>
     </a>`;
   }).join("");
+  const guide = item.viewingGuide;
+  const guideCard = guide ? `<section class="detail-section"><p class="section-kicker">GUÍA DE VISIONADO</p><div class="metadata-grid"><span><small>DRAMA</small><strong>${dramaLabels[guide.dramaLevel]}</strong></span><span><small>FINAL</small><strong>${endingLabels[guide.endingType]}</strong></span></div>${guide.endingNote ? `<p class="pending-copy">${guide.endingNote}</p>` : ""}</section>` : "";
+  const tagCards = item.tags.map((tag) => `<span class="metadata-chip">${tag.name}</span>`).join("");
+  const companyCards = item.companies.map((company) => `<div class="metadata-row"><strong>${company.name}</strong><small>${companyRoleLabels[company.role]}</small></div>`).join("");
+  const collectionCards = item.collections.map((collection) => `<div class="metadata-row"><strong>${collection.title}</strong><small>${collection.kind} · parte ${collection.position}</small></div>`).join("");
+  const warningCards = item.contentWarnings.map((warning) => `<div class="warning-row ${warning.severity}"><strong>${warning.name}</strong><small>${warning.description || "Sin descripción adicional"}</small></div>`).join("");
+  const seasonCards = item.seasons.map((season) => `<details class="season-row"><summary>Temporada ${season.number}${season.title ? ` · ${season.title}` : ""} <small>${season.episodes.length} episodios</small></summary>${season.episodes.map((episode) => `<p><strong>${episode.kind === "special" ? "Especial" : `Episodio ${episode.number}`}</strong><span>${episode.title || "Título pendiente"}${episode.durationMinutes ? ` · ${episode.durationMinutes} min` : ""}</span></p>`).join("")}</details>`).join("");
   return `${detailHeader("Ficha de serie")}
     <div class="detail-layout series-layout">
       <aside>${mediaMarkup(item, "cover", `Portada de ${item.title}`)}</aside>
       <div class="detail-main"><p class="eyebrow">${item.country.toUpperCase()} · ${formatReleaseDate(item.releaseDate).toUpperCase()}</p><h2>${item.title}</h2><p class="detail-lead">${item.synopsis}</p>${item.releaseDateSourceUrl ? `<a class="release-source" href="${item.releaseDateSourceUrl}" target="_blank" rel="noreferrer">Fuente de la fecha de estreno ↗</a>` : ""}
         <div class="score-strip"><span><small>ESTADO</small><strong>${statusLabels[item.status] || item.status}</strong></span><span><small>ESTRENO</small><strong>${item.year}</strong></span><span><small>PAÍS</small><strong>${item.country}</strong></span><span><small>REPARTO</small><strong>${item.cast.length}</strong></span></div>
         <section class="detail-section"><p class="section-kicker">DÓNDE VER</p><div class="availability-list">${availabilityCards || '<p class="pending-copy">Disponibilidad pendiente de verificar.</p>'}</div></section>
+        ${guideCard}
+        ${tagCards ? `<section class="detail-section"><p class="section-kicker">ETIQUETAS</p><div class="metadata-chips">${tagCards}</div></section>` : ""}
+        ${companyCards ? `<section class="detail-section"><p class="section-kicker">EMPRESAS</p><div class="metadata-list">${companyCards}</div></section>` : ""}
+        ${collectionCards ? `<section class="detail-section"><p class="section-kicker">COLECCIONES</p><div class="metadata-list">${collectionCards}</div></section>` : ""}
+        ${seasonCards ? `<section class="detail-section"><p class="section-kicker">EPISODIOS</p><div class="metadata-list">${seasonCards}</div></section>` : ""}
+        ${warningCards ? `<section class="detail-section"><p class="section-kicker">AVISOS DE CONTENIDO</p><div class="metadata-list">${warningCards}</div></section>` : ""}
         <section class="detail-section"><p class="section-kicker">PAREJAS DE LA SERIE</p><div class="relation-grid">${pairCards}</div></section>
         <section class="detail-section"><p class="section-kicker">REPARTO GL</p><div class="cast-list">${castCards}</div></section>
       </div>
@@ -225,13 +252,14 @@ function showDetail(type, id, push = true) {
 }
 
 function resetFilters() {
-  Object.assign(state, { search: "", provider: "", pairings: [], country: "", releaseMonth: "", releaseYear: "", sort: "newest" });
+  Object.assign(state, { search: "", provider: "", pairings: [], country: "", releaseMonth: "", releaseYear: "", drama: 3, endings: [], comfort: false, tag: "", sort: "newest" });
   document.querySelector("#search-input").value = "";
-  document.querySelector("#drama-filter").value = 5;
-  document.querySelector("#drama-value").textContent = 5;
+  document.querySelector("#drama-filter").value = 3;
+  document.querySelector("#drama-value").textContent = 3;
   document.querySelector("#country-filter").value = "";
   document.querySelector("#release-month-filter").value = "";
   document.querySelector("#release-year-filter").value = "";
+  document.querySelector("#tag-filter").value = "";
   document.querySelector("#sort-select").value = "newest";
   document.querySelectorAll(".filters input[type=checkbox]").forEach((input) => { input.checked = false; });
   document.querySelector("#comfort-toggle").setAttribute("aria-checked", "false");
@@ -251,7 +279,7 @@ document.addEventListener("click", (event) => {
   if (event.target.closest("[data-quick-filter=comfort]")) { state.comfort = true; document.querySelector("#comfort-toggle").setAttribute("aria-checked", "true"); renderCards(); document.querySelector("#popular").scrollIntoView(); }
   if (event.target.closest("[data-reset]")) resetFilters();
   const remove = event.target.closest("[data-remove-filter]");
-  if (remove) { const [type, value] = remove.dataset.removeFilter.split(":"); if (type === "search") { state.search = ""; document.querySelector("#search-input").value = ""; } if (type === "provider") { state.provider = ""; renderProviders(); } if (type === "drama") { state.drama = 5; document.querySelector("#drama-filter").value = 5; document.querySelector("#drama-value").textContent = 5; } if (type === "comfort") { state.comfort = false; document.querySelector("#comfort-toggle").setAttribute("aria-checked", "false"); } if (type === "ending") state.endings = state.endings.filter((ending) => ending !== value); if (type === "pairing") state.pairings = state.pairings.filter((role) => role !== value); if (type === "country") { state.country = ""; document.querySelector("#country-filter").value = ""; } if (type === "releaseMonth") { state.releaseMonth = ""; document.querySelector("#release-month-filter").value = ""; } if (type === "releaseYear") { state.releaseYear = ""; document.querySelector("#release-year-filter").value = ""; } renderCards(); }
+  if (remove) { const [type, value] = remove.dataset.removeFilter.split(":"); if (type === "search") { state.search = ""; document.querySelector("#search-input").value = ""; } if (type === "provider") { state.provider = ""; renderProviders(); } if (type === "drama") { state.drama = 3; document.querySelector("#drama-filter").value = 3; document.querySelector("#drama-value").textContent = 3; } if (type === "comfort") { state.comfort = false; document.querySelector("#comfort-toggle").setAttribute("aria-checked", "false"); } if (type === "ending") state.endings = state.endings.filter((ending) => ending !== value); if (type === "tag") { state.tag = ""; document.querySelector("#tag-filter").value = ""; } if (type === "pairing") state.pairings = state.pairings.filter((role) => role !== value); if (type === "country") { state.country = ""; document.querySelector("#country-filter").value = ""; } if (type === "releaseMonth") { state.releaseMonth = ""; document.querySelector("#release-month-filter").value = ""; } if (type === "releaseYear") { state.releaseYear = ""; document.querySelector("#release-year-filter").value = ""; } renderCards(); }
 });
 
 document.addEventListener("error", (event) => {
@@ -265,6 +293,7 @@ document.querySelectorAll("input[name=pairing]").forEach((input) => input.addEve
 document.querySelector("#country-filter").addEventListener("change", (event) => { state.country = event.target.value; renderCards(); });
 document.querySelector("#release-month-filter").addEventListener("change", (event) => { state.releaseMonth = event.target.value; renderCards(); });
 document.querySelector("#release-year-filter").addEventListener("change", (event) => { state.releaseYear = event.target.value; renderCards(); });
+document.querySelector("#tag-filter").addEventListener("change", (event) => { state.tag = event.target.value; renderCards(); });
 document.querySelector("#sort-select").addEventListener("change", (event) => { state.sort = event.target.value; renderCards(); });
 document.querySelector("#comfort-toggle").addEventListener("click", (event) => { state.comfort = event.currentTarget.getAttribute("aria-checked") !== "true"; event.currentTarget.setAttribute("aria-checked", String(state.comfort)); renderCards(); });
 document.querySelector("#reset-filters").addEventListener("click", resetFilters);
@@ -288,6 +317,12 @@ async function loadCatalog() {
     document.querySelector(".provider-section").hidden = payload.platforms.length === 0;
     const countries = [...new Set(series.map((item) => item.country))].sort((a, b) => a.localeCompare(b, "es"));
     document.querySelector("#country-filter").innerHTML = `<option value="">Todos los países</option>${countries.map((country) => `<option>${country}</option>`).join("")}`;
+    const hasViewingGuides = series.some((item) => item.viewingGuide);
+    document.querySelector("#drama-fieldset").hidden = !hasViewingGuides;
+    document.querySelector("#ending-fieldset").hidden = !hasViewingGuides;
+    document.querySelector("#comfort-box").hidden = !hasViewingGuides;
+    document.querySelector("#tag-fieldset").hidden = payload.tags.length === 0;
+    document.querySelector("#tag-filter").innerHTML = `<option value="">Todas las etiquetas</option>${payload.tags.map((tag) => `<option value="${tag.id}">${tag.name}</option>`).join("")}`;
     renderProviders();
     renderReleaseFilters();
     renderCards();

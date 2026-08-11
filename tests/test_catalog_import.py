@@ -150,6 +150,17 @@ def test_imports_a_complete_catalog_with_provenance(connection, catalog_data) ->
         "series_pairings": 1,
         "platforms": 1,
         "availability": 1,
+        "companies": 0,
+        "series_companies": 0,
+        "collections": 0,
+        "collection_entries": 0,
+        "seasons": 0,
+        "episodes": 0,
+        "tags": 0,
+        "series_tags": 0,
+        "content_warnings": 0,
+        "series_content_warnings": 0,
+        "viewing_guides": 0,
         "sources": 1,
         "provenance": 3,
     }
@@ -169,6 +180,128 @@ def test_imports_a_complete_catalog_with_provenance(connection, catalog_data) ->
         ).fetchone()[0]
         == "verified"
     )
+
+
+def _extended_catalog_data() -> dict:
+    source = {
+        "id": "extended-source",
+        "title": "Extended catalog source",
+        "url": "https://example.com/extended",
+        "source_type": "official",
+    }
+    entities = [
+        ("company", "studio", "name"),
+        ("series_company", "gap-2022:studio:producer", "role"),
+        ("collection", "sample-universe", "title"),
+        ("collection_entry", "sample-universe:gap-2022", "position"),
+        ("season", "gap-season-1", "number"),
+        ("episode", "gap-episode-1", "number"),
+        ("tag", "romance", "name"),
+        ("series_tag", "gap-2022:romance", "tag_id"),
+        ("content_warning", "flashing-lights", "name"),
+        (
+            "series_content_warning",
+            "gap-2022:flashing-lights",
+            "severity",
+        ),
+        ("viewing_guide", "gap-2022", "drama_level"),
+    ]
+    return {
+        "format_version": 1,
+        "companies": [{"id": "studio", "name": "Studio", "country": "Tailandia"}],
+        "series_companies": [
+            {"series_id": "gap-2022", "company_id": "studio", "role": "producer"}
+        ],
+        "collections": [
+            {
+                "id": "sample-universe",
+                "title": "Sample Universe",
+                "kind": "franchise",
+            }
+        ],
+        "collection_entries": [
+            {"collection_id": "sample-universe", "series_id": "gap-2022", "position": 1}
+        ],
+        "seasons": [
+            {"id": "gap-season-1", "series_id": "gap-2022", "number": 1}
+        ],
+        "episodes": [
+            {
+                "id": "gap-episode-1",
+                "season_id": "gap-season-1",
+                "number": 1,
+                "kind": "regular",
+                "air_date": "2022-11-19",
+            }
+        ],
+        "tags": [{"id": "romance", "name": "Romance", "category": "genre"}],
+        "series_tags": [{"series_id": "gap-2022", "tag_id": "romance"}],
+        "content_warnings": [
+            {
+                "id": "flashing-lights",
+                "name": "Luces intermitentes",
+                "description": "Incluye luces intermitentes.",
+            }
+        ],
+        "series_content_warnings": [
+            {"series_id": "gap-2022", "warning_id": "flashing-lights", "severity": "low"}
+        ],
+        "viewing_guides": [
+            {
+                "series_id": "gap-2022",
+                "drama_level": "light",
+                "ending_type": "happy_ever_after",
+                "ending_note": "Ejemplo de prueba.",
+            }
+        ],
+        "sources": [source],
+        "provenance": [
+            {
+                "source_id": source["id"],
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "field_name": field_name,
+                "checked_on": "2026-08-11",
+                "status": "verified",
+            }
+            for entity_type, entity_id, field_name in entities
+        ],
+    }
+
+
+def test_imports_extended_catalog_and_is_idempotent(connection) -> None:
+    document = parse_catalog(_extended_catalog_data())
+
+    first = import_catalog(connection, document)
+    second = import_catalog(connection, document)
+
+    for section in (
+        "companies",
+        "series_companies",
+        "collections",
+        "collection_entries",
+        "seasons",
+        "episodes",
+        "tags",
+        "series_tags",
+        "content_warnings",
+        "series_content_warnings",
+        "viewing_guides",
+    ):
+        assert first.inserted[section] == 1
+    assert first.inserted["sources"] == 1
+    assert first.inserted["provenance"] == 11
+    assert second.inserted_total == 0
+    assert second.unchanged_total == 23
+
+
+def test_import_rejects_conflicting_viewing_guide(connection) -> None:
+    data = _extended_catalog_data()
+    import_catalog(connection, parse_catalog(data))
+    data["viewing_guides"][0]["drama_level"] = "high"
+
+    with pytest.raises(CatalogConflictError, match="viewing_guides"):
+        import_catalog(connection, parse_catalog(data))
 
 
 def test_version_five_upgrades_without_losing_the_catalog() -> None:
@@ -298,6 +431,17 @@ def test_import_enriches_empty_optional_series_fields(connection, catalog_data) 
         "series_pairings": 0,
         "platforms": 0,
         "availability": 0,
+        "companies": 0,
+        "series_companies": 0,
+        "collections": 0,
+        "collection_entries": 0,
+        "seasons": 0,
+        "episodes": 0,
+        "tags": 0,
+        "series_tags": 0,
+        "content_warnings": 0,
+        "series_content_warnings": 0,
+        "viewing_guides": 0,
         "sources": 0,
         "provenance": 0,
     }

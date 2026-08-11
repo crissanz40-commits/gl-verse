@@ -36,6 +36,29 @@ El documento debe ser JSON UTF-8, declarar `format_version: 1` y utilizar única
       "subtitle_languages": ["es", "en"]
     }
   ],
+  "companies": [
+    {
+      "id": "example-studio",
+      "name": "Example Studio",
+      "country": "Tailandia",
+      "website_url": "https://studio.example.com"
+    }
+  ],
+  "series_companies": [
+    {
+      "series_id": "identificador-serie-2026",
+      "company_id": "example-studio",
+      "role": "producer"
+    }
+  ],
+  "viewing_guides": [
+    {
+      "series_id": "identificador-serie-2026",
+      "drama_level": "light",
+      "ending_type": "happy_for_now",
+      "ending_note": "Nota breve respaldada por la fuente."
+    }
+  ],
   "sources": [
     {
       "id": "serie-2026-official",
@@ -70,6 +93,17 @@ El documento debe ser JSON UTF-8, declarar `format_version: 1` y utilizar única
 | `series_pairings` | `id`, `series_id`, `character_ids`, `role` | `acting_pair_id` |
 | `platforms` | `id`, `name` | `website_url` |
 | `availability` | `series_id`, `platform_id`, `territory`, `access_model`, `official_url` | `subtitle_languages` |
+| `companies` | `id`, `name` | `country`, `website_url` |
+| `series_companies` | `series_id`, `company_id`, `role` | — |
+| `collections` | `id`, `title`, `kind` | `description` |
+| `collection_entries` | `collection_id`, `series_id`, `position` | — |
+| `seasons` | `id`, `series_id`, `number` | `title`, `release_year` |
+| `episodes` | `id`, `season_id`, `number` | `title`, `kind`, `air_date`, `duration_minutes` |
+| `tags` | `id`, `name`, `category` | — |
+| `series_tags` | `series_id`, `tag_id` | — |
+| `content_warnings` | `id`, `name` | `description` |
+| `series_content_warnings` | `series_id`, `warning_id`, `severity` | — |
+| `viewing_guides` | `series_id`, `drama_level`, `ending_type` | `ending_note` |
 | `sources` | `id`, `title`, `url`, `source_type` | `publisher`, `published_on` |
 | `provenance` | `source_id`, `entity_type`, `entity_id`, `field_name`, `checked_on`, `status` | `note` |
 
@@ -79,6 +113,18 @@ El documento debe ser JSON UTF-8, declarar `format_version: 1` y utilizar única
 
 Cada disponibilidad es única por serie, plataforma y territorio. `territory` usa `GLOBAL` o un código ISO de país de dos letras en mayúsculas, por ejemplo `ES`, `TH` o `US`. Una carga posterior puede añadir idiomas de subtítulos, pero cambiar el modelo de acceso o la URL oficial de una disponibilidad existente se considera un conflicto. Para su trazabilidad, `provenance.entity_id` se forma como `series_id:platform_id:territory`.
 
+Las colecciones ordenan sus series con `position`; las temporadas son únicas por serie y número, y los episodios por temporada, número y tipo. Los campos descriptivos opcionales pueden completarse después si siguen vacíos, pero una clasificación o relación existente nunca se sustituye silenciosamente.
+
+`viewing_guides` mantiene separadas dos dimensiones: `drama_level` describe la intensidad dramática general y `ending_type` el resultado emocional del final de la pareja principal. `ending_note` aporta contexto sin reemplazar ninguna de las dos clasificaciones. No debe usarse para datos personales de visionado.
+
+Los identificadores de trazabilidad de las relaciones se forman así:
+
+- `series_company`: `series_id:company_id:role`.
+- `collection_entry`: `collection_id:series_id`.
+- `series_tag`: `series_id:tag_id`.
+- `series_content_warning`: `series_id:warning_id`.
+- `viewing_guide`: el propio `series_id`.
+
 ## Valores permitidos
 
 - `series.status`: `announced`, `airing`, `completed`, `cancelled`.
@@ -86,6 +132,13 @@ Cada disponibilidad es única por serie, plataforma y territorio. `territory` us
 - `credits.cast_importance`: `lead`, `supporting`, `guest`.
 - `series_pairings.role`: `main`, `supporting`.
 - `availability.access_model`: `free`, `subscription`, `rental`, `purchase`.
+- `series_companies.role`: `producer`, `broadcaster`, `distributor`.
+- `collections.kind`: `anthology`, `franchise`, `shared_universe`.
+- `episodes.kind`: `regular`, `special` (si se omite, se usa `regular`).
+- `tags.category`: `genre`, `trope`, `theme`, `tone`.
+- `series_content_warnings.severity`: `low`, `medium`, `high`.
+- `viewing_guides.drama_level`: `zero_drama`, `light`, `moderate`, `high`.
+- `viewing_guides.ending_type`: `happy_ever_after`, `happy_for_now`, `bittersweet`, `open`, `sad`, `tragic`, `unknown`.
 - `sources.source_type`: `official`, `platform`, `press`, `interview`, `database`, `community`.
 - `provenance.status`: `verified`, `corroborated`, `unverified`, `conflicting`.
 - Fechas: formato ISO `YYYY-MM-DD`.

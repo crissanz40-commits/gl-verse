@@ -25,11 +25,17 @@ class EntityType(str, Enum):
     ACTING_PAIR = "acting_pair"
     CHARACTER_PAIRING = "character_pairing"
     COMPANY = "company"
+    SERIES_COMPANY = "series_company"
     PLATFORM = "platform"
     AVAILABILITY = "availability"
     COLLECTION = "collection"
+    COLLECTION_ENTRY = "collection_entry"
     SEASON = "season"
     EPISODE = "episode"
+    TAG = "tag"
+    SERIES_TAG = "series_tag"
+    CONTENT_WARNING = "content_warning"
+    SERIES_CONTENT_WARNING = "series_content_warning"
     VIEWING_GUIDE = "viewing_guide"
 
 
