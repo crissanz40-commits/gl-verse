@@ -83,6 +83,23 @@ def catalog_data():
                 "role": "main",
             }
         ],
+        "platforms": [
+            {
+                "id": "sample-stream",
+                "name": "Sample Stream",
+                "website_url": "https://stream.example",
+            }
+        ],
+        "availability": [
+            {
+                "series_id": "sample-series-2026",
+                "platform_id": "sample-stream",
+                "territory": "ES",
+                "access_model": "subscription",
+                "official_url": "https://stream.example/sample-series",
+                "subtitle_languages": ["es", "en"],
+            }
+        ],
         "sources": [
             {
                 "id": "sample-official",
@@ -100,7 +117,23 @@ def catalog_data():
                 "field_name": "title",
                 "checked_on": "2026-08-10",
                 "status": "verified",
-            }
+            },
+            {
+                "source_id": "sample-official",
+                "entity_type": "platform",
+                "entity_id": "sample-stream",
+                "field_name": "name",
+                "checked_on": "2026-08-10",
+                "status": "verified",
+            },
+            {
+                "source_id": "sample-official",
+                "entity_type": "availability",
+                "entity_id": "sample-series-2026:sample-stream:ES",
+                "field_name": "official_url",
+                "checked_on": "2026-08-10",
+                "status": "verified",
+            },
         ],
     }
 
@@ -115,8 +148,10 @@ def test_imports_a_complete_catalog_with_provenance(connection, catalog_data) ->
         "credits": 2,
         "acting_pairs": 1,
         "series_pairings": 1,
+        "platforms": 1,
+        "availability": 1,
         "sources": 1,
-        "provenance": 1,
+        "provenance": 3,
     }
     assert (
         connection.execute("SELECT title FROM series WHERE id = 'sample-series-2026'").fetchone()[0]
@@ -161,7 +196,7 @@ def test_second_import_is_idempotent(connection, catalog_data) -> None:
     summary = import_catalog(connection, document)
 
     assert summary.inserted_total == 0
-    assert summary.unchanged_total == 11
+    assert summary.unchanged_total == 15
 
 
 def test_legacy_import_without_release_date_remains_idempotent(connection, catalog_data) -> None:
@@ -171,7 +206,7 @@ def test_legacy_import_without_release_date_remains_idempotent(connection, catal
     summary = import_catalog(connection, parse_catalog(catalog_data))
 
     assert summary.inserted_total == 0
-    assert summary.unchanged_total == 11
+    assert summary.unchanged_total == 15
 
 
 def test_import_enriches_empty_optional_series_fields(connection, catalog_data) -> None:
@@ -191,6 +226,8 @@ def test_import_enriches_empty_optional_series_fields(connection, catalog_data) 
         "credits": [],
         "acting_pairs": [],
         "series_pairings": [],
+        "platforms": [],
+        "availability": [],
         "sources": [],
         "provenance": [],
     }
@@ -205,6 +242,8 @@ def test_import_enriches_empty_optional_series_fields(connection, catalog_data) 
         "credits": 0,
         "acting_pairs": 0,
         "series_pairings": 0,
+        "platforms": 0,
+        "availability": 0,
         "sources": 0,
         "provenance": 0,
     }
@@ -220,7 +259,7 @@ def test_import_enriches_empty_optional_series_fields(connection, catalog_data) 
 
     repeated = import_catalog(connection, parse_catalog(catalog_data))
     assert repeated.updated_total == 0
-    assert repeated.unchanged_total == 11
+    assert repeated.unchanged_total == 15
 
 
 def test_import_rejects_overwriting_enriched_series_fields(connection, catalog_data) -> None:
@@ -286,7 +325,35 @@ def test_import_enriches_empty_optional_person_and_pair_fields(connection, catal
 
     repeated = import_catalog(connection, parse_catalog(catalog_data))
     assert repeated.updated_total == 0
-    assert repeated.unchanged_total == 11
+    assert repeated.unchanged_total == 15
+
+
+def test_import_enriches_platform_and_availability_subtitles(connection, catalog_data) -> None:
+    website_url = catalog_data["platforms"][0].pop("website_url")
+    subtitle_languages = catalog_data["availability"][0].pop("subtitle_languages")
+    import_catalog(connection, parse_catalog(catalog_data))
+    catalog_data["platforms"][0]["website_url"] = website_url
+    catalog_data["availability"][0]["subtitle_languages"] = subtitle_languages
+
+    summary = import_catalog(connection, parse_catalog(catalog_data))
+
+    assert summary.updated["platforms"] == 1
+    assert summary.updated["availability"] == 1
+    assert {
+        row[0]
+        for row in connection.execute(
+            "SELECT language FROM availability_subtitles WHERE series_id = ?",
+            ("sample-series-2026",),
+        )
+    } == {"es", "en"}
+
+
+def test_import_rejects_conflicting_availability(connection, catalog_data) -> None:
+    import_catalog(connection, parse_catalog(catalog_data))
+    catalog_data["availability"][0]["official_url"] = "https://stream.example/another-page"
+
+    with pytest.raises(CatalogConflictError, match="availability"):
+        import_catalog(connection, parse_catalog(catalog_data))
 
 
 @pytest.mark.parametrize(
@@ -340,7 +407,7 @@ def test_dry_run_validates_but_does_not_save(connection, catalog_data) -> None:
     summary = import_catalog(connection, parse_catalog(catalog_data), dry_run=True)
 
     assert summary.dry_run is True
-    assert summary.inserted_total == 11
+    assert summary.inserted_total == 15
     assert (
         connection.execute(
             "SELECT COUNT(*) FROM series WHERE id = 'sample-series-2026'"
@@ -389,7 +456,7 @@ def test_cli_imports_a_json_file(tmp_path, catalog_data, capsys) -> None:
     result = main(["importar-series", str(catalog_path), "--database", str(database_path)])
 
     assert result == 0
-    assert "Importación completada: 11 registros nuevos" in capsys.readouterr().out
+    assert "Importación completada: 15 registros nuevos" in capsys.readouterr().out
     with sqlite3.connect(database_path) as database:
         assert (
             database.execute(

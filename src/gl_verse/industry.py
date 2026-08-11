@@ -92,6 +92,10 @@ class Availability:
         _require_text(self.series_id, "El identificador de la serie")
         _require_text(self.platform_id, "El identificador de la plataforma")
         _require_text(self.territory, "El territorio")
+        if self.territory != "GLOBAL" and (
+            len(self.territory) != 2 or not self.territory.isascii() or not self.territory.isupper()
+        ):
+            raise ValueError("El territorio debe ser GLOBAL o un código ISO de dos letras")
         _validate_url(self.official_url, "El enlace oficial")
 
         for language in self.subtitle_languages:
@@ -99,3 +103,8 @@ class Availability:
 
         if len(set(self.subtitle_languages)) != len(self.subtitle_languages):
             raise ValueError("Los idiomas de subtítulos no pueden estar duplicados")
+
+    @property
+    def id(self) -> str:
+        """Identificador estable usado por la trazabilidad del catálogo."""
+        return f"{self.series_id}:{self.platform_id}:{self.territory}"

@@ -13,6 +13,8 @@ La carpeta `web/` contiene la experiencia frontal responsive. El comando `gl-ver
 - trayectoria conjunta de cada pareja a través de sus series;
 - trayectoria individual de cada actriz, incluidas participaciones sin pareja;
 - espacios de portada e imagen preparados para mostrar su URL y fuente.
+- disponibilidad por plataforma y territorio, con modelo de acceso y subtítulos;
+- filtro por plataforma alimentado por SQLite.
 
 Para probar el frontal y la API con la base local:
 
@@ -26,7 +28,7 @@ Después abre `http://127.0.0.1:8000` en el navegador. Puedes elegir otra base, 
 gl-verse web --database data/gl_verse.db --host 127.0.0.1 --port 8080
 ```
 
-`GET /api/health` permite comprobar que el proceso está activo. Las valoraciones personales, plataformas y guías de visionado siguen separadas del catálogo objetivo; sus filtros se activarán cuando esas capas estén persistidas.
+`GET /api/health` permite comprobar que el proceso está activo. Las valoraciones personales y las guías de visionado siguen separadas del catálogo objetivo; sus filtros se activarán cuando esas capas estén persistidas.
 
 ## Migraciones SQLite
 
@@ -39,6 +41,7 @@ La persistencia utiliza migraciones SQL numeradas:
 - `005_seed_current_catalog.sql`: consolida las seis fichas visibles, sus actrices, personajes y parejas artísticas.
 - `006_catalog_import_provenance.sql`: fuentes y comprobaciones utilizadas por el importador de catálogo.
 - `007_series_release_date.sql`: fecha completa de estreno para filtrar por mes y año.
+- `008_platforms_and_availability.sql`: plataformas y disponibilidad territorial con subtítulos.
 
 Una base nueva ejecuta todas las migraciones en orden. Una base existente aplica únicamente las versiones pendientes.
 
@@ -67,9 +70,11 @@ La versión 4 añade el modelo necesario para navegar por actrices y parejas:
 
 La versión 5 lleva a SQLite las fichas que ya aparecen en el prototipo: *GAP*, *The Loyal Pin*, *Pluto*, *23.5*, *The Secret of Us* y *Affair*. La carga reutiliza actrices y parejas compartidas, conserva registros existentes y puede inicializarse de nuevo sin duplicar relaciones.
 
+La versión 8 persiste dónde puede verse cada serie. Una disponibilidad pertenece a una combinación única de serie, plataforma y territorio (`GLOBAL` o código ISO de dos letras); el modelo de acceso y la URL oficial se guardan en esa relación, mientras que los idiomas de subtítulos se normalizan en una tabla hija.
+
 ## Importar nuevas series sin modificar el código
 
-Las ampliaciones del catálogo se preparan como JSON y se incorporan directamente a SQLite. El formato admite series, personas, personajes, créditos, parejas artísticas, trabajos compartidos y las fuentes que respaldan cada campo. La especificación completa está en [`docs/catalog-import-format.md`](docs/catalog-import-format.md).
+Las ampliaciones del catálogo se preparan como JSON y se incorporan directamente a SQLite. El formato admite series, personas, personajes, créditos, parejas artísticas, trabajos compartidos, plataformas, disponibilidad territorial y las fuentes que respaldan cada campo. La especificación completa está en [`docs/catalog-import-format.md`](docs/catalog-import-format.md).
 
 Primero conviene simular la carga completa:
 

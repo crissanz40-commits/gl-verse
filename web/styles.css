@@ -205,6 +205,16 @@ button, select { cursor: pointer; }
 .entity-media::after { content: ""; position: absolute; width: 72%; height: 72%; right: -25%; bottom: -30%; border: 1px solid rgba(255,255,255,.25); border-radius: 50%; }
 .image-source { position: absolute; z-index: 2; left: 10px; bottom: 10px; padding: 6px 8px; color: white; background: rgba(20,10,23,.62); border-radius: 7px; font-size: 8px; text-decoration: none; backdrop-filter: blur(8px); }
 .release-source { display: inline-block; margin-top: 8px; color: var(--pink); font-size: 9px; font-weight: 700; text-decoration: none; }
+.availability-list { margin-top: 8px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.availability-row { min-height: 60px; padding: 9px 12px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 11px; color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--line); }
+.availability-row .provider-icon { background: var(--plum); }
+.availability-row:last-child { border-bottom: 0; }
+.availability-row:hover { background: #fcf8fa; }
+.availability-row strong, .availability-row small { display: block; }
+.availability-row strong { font-family: Manrope; font-size: 12px; }
+.availability-row small { margin-top: 3px; color: var(--muted); font-size: 9px; }
+.availability-row em { color: var(--plum); font-size: 9px; font-style: normal; }
+.pending-copy { padding: 14px; color: var(--muted); font-size: 11px; }
 .detail-toolbar { min-height: 58px; padding: 0 64px 0 24px; display: flex; align-items: center; justify-content: space-between; color: var(--muted); border-bottom: 1px solid var(--line); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .detail-toolbar button { padding: 8px 10px; color: var(--plum); background: var(--pink-soft); border: 0; border-radius: 9px; font-size: 10px; font-weight: 700; letter-spacing: 0; text-transform: none; }
 .detail-layout { padding: 34px; display: grid; grid-template-columns: minmax(220px,300px) minmax(0,1fr); gap: 38px; }

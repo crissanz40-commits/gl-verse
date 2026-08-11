@@ -2,14 +2,13 @@ let actresses = [];
 let actingPairs = [];
 let seriesPairings = [];
 let series = [];
-
-const providers = [{ name: "Todas", short: "GL", color: "#6f285f" }];
+let providers = [{ id: "", name: "Todas", short: "GL", color: "#6f285f" }];
 
 const importanceLabels = { lead: "Protagonista", supporting: "Secundaria", guest: "Invitada" };
 const roleLabels = { main: "Pareja principal", supporting: "Pareja secundaria" };
 const statusLabels = { announced: "Anunciada", airing: "En emisión", completed: "Completada", cancelled: "Cancelada" };
 const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-const state = { search: "", pairings: [], country: "", releaseMonth: "", releaseYear: "", sort: "newest", saved: new Set(), detailTrail: [] };
+const state = { search: "", provider: "", pairings: [], country: "", releaseMonth: "", releaseYear: "", sort: "newest", saved: new Set(), detailTrail: [] };
 const grid = document.querySelector("#series-grid");
 const resultCount = document.querySelector("#result-count");
 const activeFilters = document.querySelector("#active-filters");
@@ -53,7 +52,7 @@ function pairingSummary(item) {
 
 function renderProviders() {
   document.querySelector("#provider-list").innerHTML = providers.map((provider) => `
-    <button class="provider-pill ${state.provider === provider.name ? "active" : ""}" type="button" data-provider="${provider.name}">
+    <button class="provider-pill ${state.provider === provider.id ? "active" : ""}" type="button" data-provider="${provider.id}">
       <span class="provider-icon" style="background:${provider.color}">${provider.short}</span>
       <span>${provider.name}<small>${provider.name === "Todas" ? "Todo el catálogo" : "Ver disponibles"}</small></span>
     </button>`).join("");
@@ -75,6 +74,7 @@ function visibleSeries() {
     const [releaseYear, releaseMonth] = releaseParts(item);
     return (!term || searchable.includes(term))
       && (!state.pairings.length || state.pairings.some((role) => roles.includes(role)))
+      && (!state.provider || item.availability.some((entry) => entry.platformId === state.provider))
       && (!state.country || item.country === state.country)
       && (!state.releaseMonth || releaseMonth === state.releaseMonth.padStart(2, "0"))
       && (!state.releaseYear || releaseYear === state.releaseYear);
@@ -123,6 +123,7 @@ function renderUniverse() {
 function renderActiveFilters() {
   const chips = [];
   if (state.search) chips.push([`Búsqueda: ${state.search}`, "search"]);
+  if (state.provider) chips.push([byId(providers, state.provider)?.name || state.provider, "provider"]);
   state.pairings.forEach((value) => chips.push([roleLabels[value], `pairing:${value}`]));
   if (state.country) chips.push([state.country, "country"]);
   if (state.releaseMonth) chips.push([monthNames[Number(state.releaseMonth) - 1], "releaseMonth"]);
@@ -152,11 +153,20 @@ function seriesDetail(item) {
       <span><strong>${actress.stageName}</strong><small>${credit.character} · ${importanceLabels[credit.importance]}</small></span><em>${status} →</em>
     </button>`;
   }).join("");
+  const accessLabels = { free: "Gratis", subscription: "Suscripción", rental: "Alquiler", purchase: "Compra" };
+  const availabilityCards = item.availability.map((entry) => {
+    const subtitles = entry.subtitleLanguages.length ? ` · Subtítulos: ${entry.subtitleLanguages.join(", ")}` : "";
+    return `<a class="availability-row" href="${entry.officialUrl}" target="_blank" rel="noreferrer">
+      <span class="provider-icon">${entry.platformName.slice(0, 2).toUpperCase()}</span>
+      <span><strong>${entry.platformName}</strong><small>${entry.territory} · ${accessLabels[entry.accessModel] || entry.accessModel}${subtitles}</small></span><em>Ver ↗</em>
+    </a>`;
+  }).join("");
   return `${detailHeader("Ficha de serie")}
     <div class="detail-layout series-layout">
       <aside>${mediaMarkup(item, "cover", `Portada de ${item.title}`)}</aside>
       <div class="detail-main"><p class="eyebrow">${item.country.toUpperCase()} · ${formatReleaseDate(item.releaseDate).toUpperCase()}</p><h2>${item.title}</h2><p class="detail-lead">${item.synopsis}</p>${item.releaseDateSourceUrl ? `<a class="release-source" href="${item.releaseDateSourceUrl}" target="_blank" rel="noreferrer">Fuente de la fecha de estreno ↗</a>` : ""}
         <div class="score-strip"><span><small>ESTADO</small><strong>${statusLabels[item.status] || item.status}</strong></span><span><small>ESTRENO</small><strong>${item.year}</strong></span><span><small>PAÍS</small><strong>${item.country}</strong></span><span><small>REPARTO</small><strong>${item.cast.length}</strong></span></div>
+        <section class="detail-section"><p class="section-kicker">DÓNDE VER</p><div class="availability-list">${availabilityCards || '<p class="pending-copy">Disponibilidad pendiente de verificar.</p>'}</div></section>
         <section class="detail-section"><p class="section-kicker">PAREJAS DE LA SERIE</p><div class="relation-grid">${pairCards}</div></section>
         <section class="detail-section"><p class="section-kicker">REPARTO GL</p><div class="cast-list">${castCards}</div></section>
       </div>
@@ -207,7 +217,7 @@ function showDetail(type, id, push = true) {
 }
 
 function resetFilters() {
-  Object.assign(state, { search: "", pairings: [], country: "", releaseMonth: "", releaseYear: "", sort: "newest" });
+  Object.assign(state, { search: "", provider: "", pairings: [], country: "", releaseMonth: "", releaseYear: "", sort: "newest" });
   document.querySelector("#search-input").value = "";
   document.querySelector("#drama-filter").value = 5;
   document.querySelector("#drama-value").textContent = 5;
@@ -233,7 +243,7 @@ document.addEventListener("click", (event) => {
   if (event.target.closest("[data-quick-filter=comfort]")) { state.comfort = true; document.querySelector("#comfort-toggle").setAttribute("aria-checked", "true"); renderCards(); document.querySelector("#popular").scrollIntoView(); }
   if (event.target.closest("[data-reset]")) resetFilters();
   const remove = event.target.closest("[data-remove-filter]");
-  if (remove) { const [type, value] = remove.dataset.removeFilter.split(":"); if (type === "search") { state.search = ""; document.querySelector("#search-input").value = ""; } if (type === "provider") { state.provider = "Todas"; renderProviders(); } if (type === "drama") { state.drama = 5; document.querySelector("#drama-filter").value = 5; document.querySelector("#drama-value").textContent = 5; } if (type === "comfort") { state.comfort = false; document.querySelector("#comfort-toggle").setAttribute("aria-checked", "false"); } if (type === "ending") state.endings = state.endings.filter((ending) => ending !== value); if (type === "pairing") state.pairings = state.pairings.filter((role) => role !== value); if (type === "country") { state.country = ""; document.querySelector("#country-filter").value = ""; } if (type === "releaseMonth") { state.releaseMonth = ""; document.querySelector("#release-month-filter").value = ""; } if (type === "releaseYear") { state.releaseYear = ""; document.querySelector("#release-year-filter").value = ""; } renderCards(); }
+  if (remove) { const [type, value] = remove.dataset.removeFilter.split(":"); if (type === "search") { state.search = ""; document.querySelector("#search-input").value = ""; } if (type === "provider") { state.provider = ""; renderProviders(); } if (type === "drama") { state.drama = 5; document.querySelector("#drama-filter").value = 5; document.querySelector("#drama-value").textContent = 5; } if (type === "comfort") { state.comfort = false; document.querySelector("#comfort-toggle").setAttribute("aria-checked", "false"); } if (type === "ending") state.endings = state.endings.filter((ending) => ending !== value); if (type === "pairing") state.pairings = state.pairings.filter((role) => role !== value); if (type === "country") { state.country = ""; document.querySelector("#country-filter").value = ""; } if (type === "releaseMonth") { state.releaseMonth = ""; document.querySelector("#release-month-filter").value = ""; } if (type === "releaseYear") { state.releaseYear = ""; document.querySelector("#release-year-filter").value = ""; } renderCards(); }
 });
 
 document.addEventListener("error", (event) => {
@@ -263,6 +273,11 @@ async function loadCatalog() {
     actingPairs = payload.actingPairs;
     seriesPairings = payload.seriesPairings;
     series = payload.series;
+    providers = [
+      { id: "", name: "Todas", short: "GL", color: "#6f285f" },
+      ...payload.platforms.map((platform) => ({ ...platform, short: platform.name.slice(0, 2).toUpperCase(), color: "#9b4d85" })),
+    ];
+    document.querySelector(".provider-section").hidden = payload.platforms.length === 0;
     const countries = [...new Set(series.map((item) => item.country))].sort((a, b) => a.localeCompare(b, "es"));
     document.querySelector("#country-filter").innerHTML = `<option value="">Todos los países</option>${countries.map((country) => `<option>${country}</option>`).join("")}`;
     renderProviders();

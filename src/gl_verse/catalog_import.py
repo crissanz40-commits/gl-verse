@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from gl_verse.database import initialize_database
+from gl_verse.industry import AccessModel, Availability, Platform
 from gl_verse.models import (
     ActingPair,
     CastImportance,
@@ -51,6 +52,8 @@ class CatalogDocument:
     credits: tuple[Credit, ...] = ()
     acting_pairs: tuple[ActingPair, ...] = ()
     series_pairings: tuple[SeriesPairing, ...] = ()
+    platforms: tuple[Platform, ...] = ()
+    availability: tuple[Availability, ...] = ()
     sources: tuple[Source, ...] = ()
     provenance: tuple[ProvenanceRecord, ...] = ()
 
@@ -105,6 +108,8 @@ def parse_catalog(raw: Any) -> CatalogDocument:
             "credits",
             "acting_pairs",
             "series_pairings",
+            "platforms",
+            "availability",
             "sources",
             "provenance",
         },
@@ -133,6 +138,13 @@ def parse_catalog(raw: Any) -> CatalogDocument:
             series_pairings=tuple(
                 _parse_series_pairing(item, index)
                 for index, item in _items(root, "series_pairings")
+            ),
+            platforms=tuple(
+                _parse_platform(item, index) for index, item in _items(root, "platforms")
+            ),
+            availability=tuple(
+                _parse_availability(item, index)
+                for index, item in _items(root, "availability")
             ),
             sources=tuple(_parse_source(item, index) for index, item in _items(root, "sources")),
             provenance=tuple(
@@ -168,12 +180,14 @@ def import_catalog(
         _reject_database_duplicates(connection, document)
         _validate_references(connection, document)
         _import_sources(connection, document.sources, inserted, unchanged)
+        _import_platforms(connection, document.platforms, inserted, updated, unchanged)
         _import_series(connection, document.series, inserted, updated, unchanged)
         _import_people(connection, document.people, inserted, updated, unchanged)
         _import_characters(connection, document.characters, inserted, unchanged)
         _import_credits(connection, document.credits, inserted, unchanged)
         _import_acting_pairs(connection, document.acting_pairs, inserted, updated, unchanged)
         _import_series_pairings(connection, document.series_pairings, inserted, unchanged)
+        _import_availability(connection, document.availability, inserted, updated, unchanged)
         _import_provenance(connection, document.provenance, inserted, unchanged)
         if dry_run:
             connection.rollback()
@@ -200,6 +214,8 @@ _SECTION_NAMES = (
     "credits",
     "acting_pairs",
     "series_pairings",
+    "platforms",
+    "availability",
     "sources",
     "provenance",
 )
@@ -373,6 +389,34 @@ def _parse_series_pairing(value: Any, index: int) -> SeriesPairing:
     )
 
 
+def _parse_platform(value: Any, index: int) -> Platform:
+    item = _object(value, "platforms", index, {"id", "name"}, {"website_url"})
+    return Platform(id=item["id"], name=item["name"], website_url=item.get("website_url"))
+
+
+def _parse_availability(value: Any, index: int) -> Availability:
+    item = _object(
+        value,
+        "availability",
+        index,
+        {"series_id", "platform_id", "territory", "access_model", "official_url"},
+        {"subtitle_languages"},
+    )
+    languages = item.get("subtitle_languages", [])
+    if not isinstance(languages, list) or not all(isinstance(language, str) for language in languages):
+        raise CatalogImportError(
+            f"availability[{index}].subtitle_languages debe ser una lista de idiomas"
+        )
+    return Availability(
+        series_id=item["series_id"],
+        platform_id=item["platform_id"],
+        territory=item["territory"],
+        access_model=AccessModel(item["access_model"]),
+        official_url=item["official_url"],
+        subtitle_languages=tuple(languages),
+    )
+
+
 def _parse_source(value: Any, index: int) -> Source:
     item = _object(
         value,
@@ -417,10 +461,15 @@ def _reject_document_duplicates(document: CatalogDocument) -> None:
         ("characters", document.characters),
         ("acting_pairs", document.acting_pairs),
         ("series_pairings", document.series_pairings),
+        ("platforms", document.platforms),
         ("sources", document.sources),
     ):
         _unique((entity.id for entity in entities), f"identificador repetido en {section}")
 
+    _unique(
+        ((item.series_id, item.platform_id, item.territory) for item in document.availability),
+        "disponibilidad repetida",
+    )
     _unique(
         (
             (credit.series_id, credit.person_id, credit.role.value, credit.character_id)
@@ -484,6 +533,19 @@ def _reject_database_duplicates(connection: sqlite3.Connection, document: Catalo
                 f"Posible persona duplicada: {item.id!r} coincide con {row['id']!r} ({row['name']})"
             )
 
+    for item in document.platforms:
+        if connection.execute("SELECT 1 FROM platforms WHERE id = ?", (item.id,)).fetchone():
+            continue
+        row = connection.execute(
+            "SELECT id, name FROM platforms WHERE name = ? COLLATE NOCASE LIMIT 1",
+            (item.name,),
+        ).fetchone()
+        if row:
+            raise CatalogConflictError(
+                f"Posible plataforma duplicada: {item.id!r} coincide con "
+                f"{row['id']!r} ({row['name']})"
+            )
+
 
 def _validate_references(connection: sqlite3.Connection, document: CatalogDocument) -> None:
     available = {
@@ -501,6 +563,10 @@ def _validate_references(connection: sqlite3.Connection, document: CatalogDocume
         "sources": _available_ids(
             connection, "catalog_sources", (item.id for item in document.sources)
         ),
+        "platforms": _available_ids(
+            connection, "platforms", (item.id for item in document.platforms)
+        ),
+        "availability": _available_availability_ids(connection, document.availability),
     }
 
     for item in document.characters:
@@ -522,6 +588,11 @@ def _validate_references(connection: sqlite3.Connection, document: CatalogDocume
             _require_reference(
                 character_id, available["characters"], f"relación {item.id}", "personaje"
             )
+    for item in document.availability:
+        _require_reference(item.series_id, available["series"], "disponibilidad", "serie")
+        _require_reference(
+            item.platform_id, available["platforms"], "disponibilidad", "plataforma"
+        )
 
     provenance_tables = {
         EntityType.SERIES: "series",
@@ -529,6 +600,8 @@ def _validate_references(connection: sqlite3.Connection, document: CatalogDocume
         EntityType.CHARACTER: "characters",
         EntityType.ACTING_PAIR: "acting_pairs",
         EntityType.CHARACTER_PAIRING: "series_pairings",
+        EntityType.PLATFORM: "platforms",
+        EntityType.AVAILABILITY: "availability",
     }
     for item in document.provenance:
         _require_reference(item.source_id, available["sources"], "trazabilidad", "fuente")
@@ -543,6 +616,18 @@ def _validate_references(connection: sqlite3.Connection, document: CatalogDocume
 def _available_ids(connection: sqlite3.Connection, table: str, document_ids: Any) -> set[str]:
     stored = {row["id"] for row in connection.execute(f"SELECT id FROM {table}").fetchall()}
     return stored | set(document_ids)
+
+
+def _available_availability_ids(
+    connection: sqlite3.Connection, document_items: tuple[Availability, ...]
+) -> set[str]:
+    stored = {
+        f"{row['series_id']}:{row['platform_id']}:{row['territory']}"
+        for row in connection.execute(
+            "SELECT series_id, platform_id, territory FROM availability"
+        ).fetchall()
+    }
+    return stored | {item.id for item in document_items}
 
 
 def _require_reference(reference: str, available: set[str], context: str, target: str) -> None:
@@ -657,6 +742,23 @@ def _import_series(connection, entities, inserted, updated, unchanged) -> None:
                 "cover_image_url",
                 "cover_image_source_url",
             ),
+        )
+
+
+def _import_platforms(connection, entities, inserted, updated, unchanged) -> None:
+    columns = ("id", "name", "website_url")
+    for item in entities:
+        _insert_or_compare(
+            connection,
+            table="platforms",
+            section="platforms",
+            key_columns=("id",),
+            columns=columns,
+            values=(item.id, item.name, item.website_url),
+            inserted=inserted,
+            unchanged=unchanged,
+            updated=updated,
+            enrichable_columns=("website_url",),
         )
 
 
@@ -807,6 +909,75 @@ def _import_series_pairings(connection, entities, inserted, unchanged) -> None:
             inserted=inserted,
             unchanged=unchanged,
         )
+
+
+def _import_availability(connection, entities, inserted, updated, unchanged) -> None:
+    for item in entities:
+        key = (item.series_id, item.platform_id, item.territory)
+        row = connection.execute(
+            """
+            SELECT access_model, official_url
+            FROM availability
+            WHERE series_id = ? AND platform_id = ? AND territory = ?
+            """,
+            key,
+        ).fetchone()
+        if row is None:
+            connection.execute(
+                """
+                INSERT INTO availability (
+                    series_id, platform_id, territory, access_model, official_url
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (*key, item.access_model.value, item.official_url),
+            )
+            for language in item.subtitle_languages:
+                connection.execute(
+                    """
+                    INSERT INTO availability_subtitles (
+                        series_id, platform_id, territory, language
+                    ) VALUES (?, ?, ?, ?)
+                    """,
+                    (*key, language),
+                )
+            inserted["availability"] += 1
+            continue
+
+        if (row["access_model"], row["official_url"]) != (
+            item.access_model.value,
+            item.official_url,
+        ):
+            raise CatalogConflictError(
+                "Conflicto en availability "
+                f"(series_id={item.series_id!r}, platform_id={item.platform_id!r}, "
+                f"territory={item.territory!r})"
+            )
+
+        stored_languages = {
+            subtitle["language"]
+            for subtitle in connection.execute(
+                """
+                SELECT language
+                FROM availability_subtitles
+                WHERE series_id = ? AND platform_id = ? AND territory = ?
+                """,
+                key,
+            ).fetchall()
+        }
+        new_languages = set(item.subtitle_languages) - stored_languages
+        for language in new_languages:
+            connection.execute(
+                """
+                INSERT INTO availability_subtitles (
+                    series_id, platform_id, territory, language
+                ) VALUES (?, ?, ?, ?)
+                """,
+                (*key, language),
+            )
+        if new_languages:
+            updated["availability"] += 1
+        else:
+            unchanged["availability"] += 1
 
 
 def _import_sources(connection, entities, inserted, unchanged) -> None:
