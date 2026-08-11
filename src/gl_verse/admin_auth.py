@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import secrets
 import sqlite3
@@ -10,6 +11,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from gl_verse.database import initialize_database
+
+logger = logging.getLogger(__name__)
 
 SESSION_TTL = timedelta(hours=8)
 FLOW_TTL = timedelta(minutes=10)
@@ -61,6 +64,9 @@ class GoogleOIDCClient:
 
     def verify(self, credential: str, nonce: str) -> GoogleIdentity:
         try:
+            import truststore
+
+            truststore.inject_into_ssl()
             from google.auth.transport.requests import Request
             from google.oauth2 import id_token
 
@@ -70,6 +76,11 @@ class GoogleOIDCClient:
                 self.config.client_id,
             )
         except Exception as error:
+            logger.warning(
+                "Google ID token rejected (%s): %s",
+                type(error).__name__,
+                error,
+            )
             raise GoogleAuthError("El token de identidad de Google no es válido") from error
         if claims.get("nonce") != nonce:
             raise GoogleAuthError("El inicio de sesión de Google no coincide con la solicitud")

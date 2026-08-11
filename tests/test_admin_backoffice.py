@@ -2,6 +2,7 @@ import json
 import threading
 from http.cookiejar import CookieJar
 from urllib.error import HTTPError
+from urllib.parse import urlencode
 from urllib.request import HTTPCookieProcessor, Request, build_opener, urlopen
 
 import pytest
@@ -30,20 +31,20 @@ class FakeGoogleClient:
         return self.identity
 
 
-def login_with_google(opener, base_url: str) -> dict:
+def login_with_google(opener, base_url: str, expected_destination: str) -> dict:
     with opener.open(f"{base_url}/api/auth/google/start?next=/admin") as response:
         config = json.load(response)
     login = Request(
         f"{base_url}/api/auth/google",
-        data=json.dumps(
+        data=urlencode(
             {"credential": "valid-token", "loginCsrf": config["loginCsrf"]}
         ).encode(),
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
         method="POST",
     )
     with opener.open(login) as response:
-        result = json.load(response)
-    assert result["nextPath"] == "/admin"
+        completion = response.read().decode()
+    assert f"url={expected_destination}" in completion
     with opener.open(f"{base_url}/api/auth/session") as response:
         return json.load(response)
 
@@ -106,7 +107,8 @@ def test_google_login_enforces_admin_role(tmp_path, email, admin_emails, expecte
     try:
         with pytest.raises(HTTPError) as unauthorized:
             urlopen(f"{base_url}/api/admin/series")
-        session = login_with_google(opener, base_url)
+        destination = "/admin.html" if expected_status == 200 else "/"
+        session = login_with_google(opener, base_url, destination)
         try:
             with opener.open(f"{base_url}/api/admin/series") as response:
                 status = response.status

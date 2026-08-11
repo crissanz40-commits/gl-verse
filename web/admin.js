@@ -28,18 +28,31 @@ function loadGoogleLibrary() {
   });
 }
 
+function submitGoogleCredential(credential, config) {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = "/api/auth/google";
+  form.target = "_top";
+  [["credential", credential], ["loginCsrf", config.loginCsrf]].forEach(([name, value]) => {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = name;
+    input.value = value;
+    form.append(input);
+  });
+  document.body.append(form);
+  form.submit();
+}
+
 async function setupGoogleLogin() {
   const config = await api("/api/auth/google/start?next=/admin");
   await loadGoogleLibrary();
   window.google.accounts.id.initialize({
     client_id: config.clientId,
     nonce: config.nonce,
-    callback: async ({ credential }) => {
-      const result = await api("/api/auth/google", {
-        method: "POST",
-        body: JSON.stringify({ credential, loginCsrf: config.loginCsrf }),
-      });
-      window.location.assign(result.nextPath);
+    callback: ({ credential }) => {
+      document.querySelector("#login-message").textContent = "Validando la cuenta con Google…";
+      submitGoogleCredential(credential, config);
     },
   });
   window.google.accounts.id.renderButton(document.querySelector("#google-login"), {
@@ -71,7 +84,11 @@ async function restoreSession() {
     }
     activateSession(session);
     await loadSeries();
-  } catch { loginPanel.hidden = false; backoffice.hidden = true; }
+  } catch (error) {
+    loginPanel.hidden = false;
+    backoffice.hidden = true;
+    document.querySelector("#login-message").textContent = error.message;
+  }
 }
 
 function activateSession(session) {

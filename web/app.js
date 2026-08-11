@@ -63,6 +63,22 @@ function loadGoogleLibrary() {
   });
 }
 
+function submitGoogleCredential(credential, config) {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = "/api/auth/google";
+  form.target = "_top";
+  [["credential", credential], ["loginCsrf", config.loginCsrf]].forEach(([name, value]) => {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = name;
+    input.value = value;
+    form.append(input);
+  });
+  document.body.append(form);
+  form.submit();
+}
+
 async function setupGoogleLogin(container) {
   const response = await fetch("/api/auth/google/start?next=/");
   if (!response.ok) throw new Error("Google no está configurado");
@@ -71,16 +87,7 @@ async function setupGoogleLogin(container) {
   window.google.accounts.id.initialize({
     client_id: config.clientId,
     nonce: config.nonce,
-    callback: async ({ credential }) => {
-      const loginResponse = await fetch("/api/auth/google", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ credential, loginCsrf: config.loginCsrf }),
-      });
-      if (!loginResponse.ok) throw new Error("No se pudo iniciar sesión con Google");
-      const result = await loginResponse.json();
-      window.location.assign(result.nextPath);
-    },
+    callback: ({ credential }) => submitGoogleCredential(credential, config),
   });
   window.google.accounts.id.renderButton(container, { theme: "outline", size: "medium" });
 }

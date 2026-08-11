@@ -128,7 +128,10 @@ class CatalogRequestHandler(SimpleHTTPRequestHandler):
             self._send_json({"error": "Google no está configurado"}, HTTPStatus.SERVICE_UNAVAILABLE)
             return
         try:
-            payload = self._read_json()
+            form_navigation = self.headers.get("Content-Type", "").startswith(
+                "application/x-www-form-urlencoded"
+            )
+            payload = self._read_form() if form_navigation else self._read_json()
             if not isinstance(payload, dict) or set(payload) != {"credential", "loginCsrf"}:
                 raise ValueError
             credential = payload["credential"]
@@ -157,16 +160,19 @@ class CatalogRequestHandler(SimpleHTTPRequestHandler):
             self._send_json({"error": "No se pudo registrar la cuenta"}, HTTPStatus.INTERNAL_SERVER_ERROR)
             return
         token, _ = self.session_store.create(user)
-        self._send_json(
-            {"status": "ok", "nextPath": flow.next_path},
-            headers={
-                "Set-Cookie": self._cookie("glv_session", token, 28800),
-                "Clear-Site-Data": '"cache"',
-            },
-        )
+        headers = {"Set-Cookie": self._cookie("glv_session", token, 28800)}
+        if form_navigation:
+            destination = "/admin.html" if user.role == "admin" else "/"
+            self._send_auth_complete(destination, headers=headers)
+        else:
+            self._send_json(
+                {"status": "ok", "nextPath": flow.next_path},
+                headers=headers,
+            )
 
     def _send_session(self) -> None:
-        session = self.session_store.get(self._session_token())
+        session_token = self._session_token()
+        session = self.session_store.get(session_token)
         if session is None:
             self._send_json(
                 {"authenticated": False, "googleConfigured": self.oidc_client is not None}
@@ -250,6 +256,13 @@ class CatalogRequestHandler(SimpleHTTPRequestHandler):
             raise ValueError("Cuerpo JSON no válido")
         return json.loads(self.rfile.read(content_length))
 
+    def _read_form(self) -> dict[str, str]:
+        content_length = int(self.headers.get("Content-Length", "0"))
+        if content_length < 1 or content_length > 65536:
+            raise ValueError("Formulario no válido")
+        values = parse_qs(self.rfile.read(content_length).decode("utf-8"), strict_parsing=True)
+        return {key: items[0] for key, items in values.items() if len(items) == 1}
+
     def _session_token(self) -> str | None:
         return self._cookie_value("glv_session")
 
@@ -292,6 +305,25 @@ class CatalogRequestHandler(SimpleHTTPRequestHandler):
             self.send_header(name, value)
         self.end_headers()
 
+    def _send_auth_complete(self, destination: str, *, headers: dict[str, str]) -> None:
+        body = (
+            "<!doctype html><html lang=\"es\"><head><meta charset=\"utf-8\">"
+            f"<meta http-equiv=\"refresh\" content=\"1; url={destination}\">"
+            "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+            "<title>Acceso completado · GL Verse</title></head>"
+            "<body><main><h1>Acceso completado</h1>"
+            f"<p>Entrando en GL Verse… <a href=\"{destination}\">Continuar</a></p>"
+            "</main></body></html>"
+        ).encode()
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        for name, value in headers.items():
+            self.send_header(name, value)
+        self.end_headers()
+        self.wfile.write(body)
+
     def _send_json(self, payload: Any, status: HTTPStatus = HTTPStatus.OK, *, headers: dict[str, str] | None = None) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -304,6 +336,11 @@ class CatalogRequestHandler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def end_headers(self) -> None:
+        static_path = urlparse(self.path).path
+        if static_path in {"/", "/admin", "/admin.html", "/index.html"} or static_path.endswith(
+            (".js", ".css")
+        ):
+            self.send_header("Cache-Control", "no-cache, must-revalidate")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
         self.send_header("X-Frame-Options", "DENY")

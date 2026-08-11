@@ -41,7 +41,7 @@ def test_web_prototype_exposes_catalog_controls() -> None:
     assert 'id="provider-list"' in html
     assert 'value="score" disabled' in html
     assert 'id="detail-dialog"' in html
-    assert 'src="app.js"' in html
+    assert 'src="app.js' in html
     assert 'href="styles.css"' in html
 
 
