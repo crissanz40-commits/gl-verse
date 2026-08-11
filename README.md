@@ -105,7 +105,7 @@ SQLite es gratuito, no necesita servidor y guarda toda la información en `data/
 
 ### Guía de visionado
 
-`ViewingGuide` permite aplicar nuestro filtro de confort: **zero drama + final feliz**.
+`ViewingGuide` se persiste junto al catálogo y mantiene separadas la intensidad dramática y el tipo de final. La API y el frontal solo activan sus filtros cuando hay datos importados; el modo confort combina **zero drama + final feliz**.
 
 ### Fuentes y trazabilidad
 

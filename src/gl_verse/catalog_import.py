@@ -9,8 +9,34 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from gl_verse.content import (
+    CollectionEntry,
+    CollectionKind,
+    Episode,
+    EpisodeKind,
+    Season,
+    SeriesCollection,
+)
 from gl_verse.database import initialize_database
-from gl_verse.industry import AccessModel, Availability, Platform
+from gl_verse.discovery import (
+    ContentWarning,
+    DramaLevel,
+    EndingType,
+    SeriesContentWarning,
+    SeriesTag,
+    Tag,
+    TagCategory,
+    ViewingGuide,
+    WarningSeverity,
+)
+from gl_verse.industry import (
+    AccessModel,
+    Availability,
+    Company,
+    CompanyRole,
+    Platform,
+    SeriesCompany,
+)
 from gl_verse.models import (
     ActingPair,
     CastImportance,
@@ -54,6 +80,17 @@ class CatalogDocument:
     series_pairings: tuple[SeriesPairing, ...] = ()
     platforms: tuple[Platform, ...] = ()
     availability: tuple[Availability, ...] = ()
+    companies: tuple[Company, ...] = ()
+    series_companies: tuple[SeriesCompany, ...] = ()
+    collections: tuple[SeriesCollection, ...] = ()
+    collection_entries: tuple[CollectionEntry, ...] = ()
+    seasons: tuple[Season, ...] = ()
+    episodes: tuple[Episode, ...] = ()
+    tags: tuple[Tag, ...] = ()
+    series_tags: tuple[SeriesTag, ...] = ()
+    content_warnings: tuple[ContentWarning, ...] = ()
+    series_content_warnings: tuple[SeriesContentWarning, ...] = ()
+    viewing_guides: tuple[ViewingGuide, ...] = ()
     sources: tuple[Source, ...] = ()
     provenance: tuple[ProvenanceRecord, ...] = ()
 
@@ -110,6 +147,17 @@ def parse_catalog(raw: Any) -> CatalogDocument:
             "series_pairings",
             "platforms",
             "availability",
+            "companies",
+            "series_companies",
+            "collections",
+            "collection_entries",
+            "seasons",
+            "episodes",
+            "tags",
+            "series_tags",
+            "content_warnings",
+            "series_content_warnings",
+            "viewing_guides",
             "sources",
             "provenance",
         },
@@ -146,6 +194,42 @@ def parse_catalog(raw: Any) -> CatalogDocument:
                 _parse_availability(item, index)
                 for index, item in _items(root, "availability")
             ),
+            companies=tuple(
+                _parse_company(item, index) for index, item in _items(root, "companies")
+            ),
+            series_companies=tuple(
+                _parse_series_company(item, index)
+                for index, item in _items(root, "series_companies")
+            ),
+            collections=tuple(
+                _parse_collection(item, index) for index, item in _items(root, "collections")
+            ),
+            collection_entries=tuple(
+                _parse_collection_entry(item, index)
+                for index, item in _items(root, "collection_entries")
+            ),
+            seasons=tuple(
+                _parse_season(item, index) for index, item in _items(root, "seasons")
+            ),
+            episodes=tuple(
+                _parse_episode(item, index) for index, item in _items(root, "episodes")
+            ),
+            tags=tuple(_parse_tag(item, index) for index, item in _items(root, "tags")),
+            series_tags=tuple(
+                _parse_series_tag(item, index) for index, item in _items(root, "series_tags")
+            ),
+            content_warnings=tuple(
+                _parse_content_warning(item, index)
+                for index, item in _items(root, "content_warnings")
+            ),
+            series_content_warnings=tuple(
+                _parse_series_content_warning(item, index)
+                for index, item in _items(root, "series_content_warnings")
+            ),
+            viewing_guides=tuple(
+                _parse_viewing_guide(item, index)
+                for index, item in _items(root, "viewing_guides")
+            ),
             sources=tuple(_parse_source(item, index) for index, item in _items(root, "sources")),
             provenance=tuple(
                 _parse_provenance(item, index) for index, item in _items(root, "provenance")
@@ -180,6 +264,12 @@ def import_catalog(
         _reject_database_duplicates(connection, document)
         _validate_references(connection, document)
         _import_sources(connection, document.sources, inserted, unchanged)
+        _import_companies(connection, document.companies, inserted, updated, unchanged)
+        _import_collections(connection, document.collections, inserted, updated, unchanged)
+        _import_tags(connection, document.tags, inserted, unchanged)
+        _import_content_warnings(
+            connection, document.content_warnings, inserted, updated, unchanged
+        )
         _import_platforms(connection, document.platforms, inserted, updated, unchanged)
         _import_series(connection, document.series, inserted, updated, unchanged)
         _import_people(connection, document.people, inserted, updated, unchanged)
@@ -190,6 +280,17 @@ def import_catalog(
             connection, document.series_pairings, inserted, updated, unchanged
         )
         _import_availability(connection, document.availability, inserted, updated, unchanged)
+        _import_series_companies(connection, document.series_companies, inserted, unchanged)
+        _import_collection_entries(connection, document.collection_entries, inserted, unchanged)
+        _import_seasons(connection, document.seasons, inserted, updated, unchanged)
+        _import_episodes(connection, document.episodes, inserted, updated, unchanged)
+        _import_series_tags(connection, document.series_tags, inserted, unchanged)
+        _import_series_content_warnings(
+            connection, document.series_content_warnings, inserted, unchanged
+        )
+        _import_viewing_guides(
+            connection, document.viewing_guides, inserted, updated, unchanged
+        )
         _import_provenance(connection, document.provenance, inserted, unchanged)
         if dry_run:
             connection.rollback()
@@ -218,6 +319,17 @@ _SECTION_NAMES = (
     "series_pairings",
     "platforms",
     "availability",
+    "companies",
+    "series_companies",
+    "collections",
+    "collection_entries",
+    "seasons",
+    "episodes",
+    "tags",
+    "series_tags",
+    "content_warnings",
+    "series_content_warnings",
+    "viewing_guides",
     "sources",
     "provenance",
 )
@@ -419,6 +531,136 @@ def _parse_availability(value: Any, index: int) -> Availability:
     )
 
 
+def _parse_company(value: Any, index: int) -> Company:
+    item = _object(value, "companies", index, {"id", "name"}, {"country", "website_url"})
+    return Company(
+        id=item["id"],
+        name=item["name"],
+        country=item.get("country"),
+        website_url=item.get("website_url"),
+    )
+
+
+def _parse_series_company(value: Any, index: int) -> SeriesCompany:
+    item = _object(
+        value, "series_companies", index, {"series_id", "company_id", "role"}, set()
+    )
+    return SeriesCompany(
+        series_id=item["series_id"],
+        company_id=item["company_id"],
+        role=CompanyRole(item["role"]),
+    )
+
+
+def _parse_collection(value: Any, index: int) -> SeriesCollection:
+    item = _object(value, "collections", index, {"id", "title", "kind"}, {"description"})
+    return SeriesCollection(
+        id=item["id"],
+        title=item["title"],
+        kind=CollectionKind(item["kind"]),
+        description=item.get("description"),
+    )
+
+
+def _parse_collection_entry(value: Any, index: int) -> CollectionEntry:
+    item = _object(
+        value,
+        "collection_entries",
+        index,
+        {"collection_id", "series_id", "position"},
+        set(),
+    )
+    return CollectionEntry(
+        collection_id=item["collection_id"],
+        series_id=item["series_id"],
+        position=item["position"],
+    )
+
+
+def _parse_season(value: Any, index: int) -> Season:
+    item = _object(
+        value,
+        "seasons",
+        index,
+        {"id", "series_id", "number"},
+        {"title", "release_year"},
+    )
+    return Season(
+        id=item["id"],
+        series_id=item["series_id"],
+        number=item["number"],
+        title=item.get("title"),
+        release_year=item.get("release_year"),
+    )
+
+
+def _parse_episode(value: Any, index: int) -> Episode:
+    item = _object(
+        value,
+        "episodes",
+        index,
+        {"id", "season_id", "number"},
+        {"title", "kind", "air_date", "duration_minutes"},
+    )
+    return Episode(
+        id=item["id"],
+        season_id=item["season_id"],
+        number=item["number"],
+        title=item.get("title"),
+        kind=EpisodeKind(item.get("kind", EpisodeKind.REGULAR.value)),
+        air_date=_optional_date(item.get("air_date"), f"episodes[{index}].air_date"),
+        duration_minutes=item.get("duration_minutes"),
+    )
+
+
+def _parse_tag(value: Any, index: int) -> Tag:
+    item = _object(value, "tags", index, {"id", "name", "category"}, set())
+    return Tag(id=item["id"], name=item["name"], category=TagCategory(item["category"]))
+
+
+def _parse_series_tag(value: Any, index: int) -> SeriesTag:
+    item = _object(value, "series_tags", index, {"series_id", "tag_id"}, set())
+    return SeriesTag(series_id=item["series_id"], tag_id=item["tag_id"])
+
+
+def _parse_content_warning(value: Any, index: int) -> ContentWarning:
+    item = _object(value, "content_warnings", index, {"id", "name"}, {"description"})
+    return ContentWarning(
+        id=item["id"], name=item["name"], description=item.get("description")
+    )
+
+
+def _parse_series_content_warning(value: Any, index: int) -> SeriesContentWarning:
+    item = _object(
+        value,
+        "series_content_warnings",
+        index,
+        {"series_id", "warning_id", "severity"},
+        set(),
+    )
+    return SeriesContentWarning(
+        series_id=item["series_id"],
+        warning_id=item["warning_id"],
+        severity=WarningSeverity(item["severity"]),
+    )
+
+
+def _parse_viewing_guide(value: Any, index: int) -> ViewingGuide:
+    item = _object(
+        value,
+        "viewing_guides",
+        index,
+        {"series_id", "drama_level", "ending_type"},
+        {"ending_note"},
+    )
+    return ViewingGuide(
+        series_id=item["series_id"],
+        drama_level=DramaLevel(item["drama_level"]),
+        ending_type=EndingType(item["ending_type"]),
+        ending_note=item.get("ending_note"),
+    )
+
+
 def _parse_source(value: Any, index: int) -> Source:
     item = _object(
         value,
@@ -464,6 +706,12 @@ def _reject_document_duplicates(document: CatalogDocument) -> None:
         ("acting_pairs", document.acting_pairs),
         ("series_pairings", document.series_pairings),
         ("platforms", document.platforms),
+        ("companies", document.companies),
+        ("collections", document.collections),
+        ("seasons", document.seasons),
+        ("episodes", document.episodes),
+        ("tags", document.tags),
+        ("content_warnings", document.content_warnings),
         ("sources", document.sources),
     ):
         _unique((entity.id for entity in entities), f"identificador repetido en {section}")
@@ -476,6 +724,35 @@ def _reject_document_duplicates(document: CatalogDocument) -> None:
         ((item.series_id, item.platform_id, item.territory) for item in document.availability),
         "disponibilidad repetida",
     )
+    _unique(
+        ((item.series_id, item.company_id, item.role.value) for item in document.series_companies),
+        "relación serie-empresa repetida",
+    )
+    _unique(
+        ((item.collection_id, item.series_id) for item in document.collection_entries),
+        "entrada de colección repetida",
+    )
+    _unique(
+        ((item.collection_id, item.position) for item in document.collection_entries),
+        "posición de colección repetida",
+    )
+    _unique(
+        ((item.series_id, item.number) for item in document.seasons),
+        "número de temporada repetido",
+    )
+    _unique(
+        ((item.season_id, item.number, item.kind.value) for item in document.episodes),
+        "número de episodio repetido",
+    )
+    _unique(
+        ((item.series_id, item.tag_id) for item in document.series_tags),
+        "etiqueta de serie repetida",
+    )
+    _unique(
+        ((item.series_id, item.warning_id) for item in document.series_content_warnings),
+        "advertencia de serie repetida",
+    )
+    _unique((item.series_id for item in document.viewing_guides), "guía de visionado repetida")
     _unique(
         (
             (credit.series_id, credit.person_id, credit.role.value, credit.character_id)
@@ -552,6 +829,35 @@ def _reject_database_duplicates(connection: sqlite3.Connection, document: Catalo
                 f"{row['id']!r} ({row['name']})"
             )
 
+    for table, column, entities, label in (
+        ("companies", "name", document.companies, "empresa"),
+        ("collections", "title", document.collections, "colección"),
+        ("content_warnings", "name", document.content_warnings, "advertencia"),
+    ):
+        for item in entities:
+            if connection.execute(f"SELECT 1 FROM {table} WHERE id = ?", (item.id,)).fetchone():
+                continue
+            row = connection.execute(
+                f"SELECT id FROM {table} WHERE {column} = ? COLLATE NOCASE LIMIT 1",
+                (getattr(item, column),),
+            ).fetchone()
+            if row:
+                raise CatalogConflictError(
+                    f"Posible {label} duplicada: {item.id!r} coincide con {row['id']!r}"
+                )
+
+    for item in document.tags:
+        if connection.execute("SELECT 1 FROM tags WHERE id = ?", (item.id,)).fetchone():
+            continue
+        row = connection.execute(
+            "SELECT id FROM tags WHERE name = ? COLLATE NOCASE AND category = ? LIMIT 1",
+            (item.name, item.category.value),
+        ).fetchone()
+        if row:
+            raise CatalogConflictError(
+                f"Posible etiqueta duplicada: {item.id!r} coincide con {row['id']!r}"
+            )
+
     for item in document.series_pairings:
         if connection.execute(
             "SELECT 1 FROM series_pairings WHERE id = ?", (item.id,)
@@ -601,6 +907,54 @@ def _validate_references(connection: sqlite3.Connection, document: CatalogDocume
             connection, "platforms", (item.id for item in document.platforms)
         ),
         "availability": _available_availability_ids(connection, document.availability),
+        "companies": _available_ids(
+            connection, "companies", (item.id for item in document.companies)
+        ),
+        "series_companies": _available_relation_ids(
+            connection,
+            "series_companies",
+            ("series_id", "company_id", "role"),
+            (_series_company_id(item) for item in document.series_companies),
+        ),
+        "collections": _available_ids(
+            connection, "collections", (item.id for item in document.collections)
+        ),
+        "collection_entries": _available_relation_ids(
+            connection,
+            "collection_entries",
+            ("collection_id", "series_id"),
+            (_collection_entry_id(item) for item in document.collection_entries),
+        ),
+        "seasons": _available_ids(
+            connection, "seasons", (item.id for item in document.seasons)
+        ),
+        "episodes": _available_ids(
+            connection, "episodes", (item.id for item in document.episodes)
+        ),
+        "tags": _available_ids(connection, "tags", (item.id for item in document.tags)),
+        "series_tags": _available_relation_ids(
+            connection,
+            "series_tags",
+            ("series_id", "tag_id"),
+            (_series_tag_id(item) for item in document.series_tags),
+        ),
+        "content_warnings": _available_ids(
+            connection,
+            "content_warnings",
+            (item.id for item in document.content_warnings),
+        ),
+        "series_content_warnings": _available_relation_ids(
+            connection,
+            "series_content_warnings",
+            ("series_id", "warning_id"),
+            (_series_warning_id(item) for item in document.series_content_warnings),
+        ),
+        "viewing_guides": _available_relation_ids(
+            connection,
+            "viewing_guides",
+            ("series_id",),
+            (item.series_id for item in document.viewing_guides),
+        ),
     }
 
     for item in document.characters:
@@ -631,6 +985,24 @@ def _validate_references(connection: sqlite3.Connection, document: CatalogDocume
         _require_reference(
             item.platform_id, available["platforms"], "disponibilidad", "plataforma"
         )
+    for item in document.series_companies:
+        _require_reference(item.series_id, available["series"], "relación serie-empresa", "serie")
+        _require_reference(item.company_id, available["companies"], "relación serie-empresa", "empresa")
+    for item in document.collection_entries:
+        _require_reference(item.collection_id, available["collections"], "entrada", "colección")
+        _require_reference(item.series_id, available["series"], "entrada", "serie")
+    for item in document.seasons:
+        _require_reference(item.series_id, available["series"], f"temporada {item.id}", "serie")
+    for item in document.episodes:
+        _require_reference(item.season_id, available["seasons"], f"episodio {item.id}", "temporada")
+    for item in document.series_tags:
+        _require_reference(item.series_id, available["series"], "etiqueta", "serie")
+        _require_reference(item.tag_id, available["tags"], "etiqueta", "tag")
+    for item in document.series_content_warnings:
+        _require_reference(item.series_id, available["series"], "advertencia", "serie")
+        _require_reference(item.warning_id, available["content_warnings"], "advertencia", "tipo")
+    for item in document.viewing_guides:
+        _require_reference(item.series_id, available["series"], "guía de visionado", "serie")
 
     provenance_tables = {
         EntityType.SERIES: "series",
@@ -640,6 +1012,17 @@ def _validate_references(connection: sqlite3.Connection, document: CatalogDocume
         EntityType.CHARACTER_PAIRING: "series_pairings",
         EntityType.PLATFORM: "platforms",
         EntityType.AVAILABILITY: "availability",
+        EntityType.COMPANY: "companies",
+        EntityType.SERIES_COMPANY: "series_companies",
+        EntityType.COLLECTION: "collections",
+        EntityType.COLLECTION_ENTRY: "collection_entries",
+        EntityType.SEASON: "seasons",
+        EntityType.EPISODE: "episodes",
+        EntityType.TAG: "tags",
+        EntityType.SERIES_TAG: "series_tags",
+        EntityType.CONTENT_WARNING: "content_warnings",
+        EntityType.SERIES_CONTENT_WARNING: "series_content_warnings",
+        EntityType.VIEWING_GUIDE: "viewing_guides",
     }
     for item in document.provenance:
         _require_reference(item.source_id, available["sources"], "trazabilidad", "fuente")
@@ -666,6 +1049,35 @@ def _available_availability_ids(
         ).fetchall()
     }
     return stored | {item.id for item in document_items}
+
+
+def _available_relation_ids(
+    connection: sqlite3.Connection,
+    table: str,
+    columns: tuple[str, ...],
+    document_ids: Any,
+) -> set[str]:
+    stored = {
+        ":".join(str(row[column]) for column in columns)
+        for row in connection.execute(f"SELECT {', '.join(columns)} FROM {table}").fetchall()
+    }
+    return stored | set(document_ids)
+
+
+def _series_company_id(item: SeriesCompany) -> str:
+    return f"{item.series_id}:{item.company_id}:{item.role.value}"
+
+
+def _collection_entry_id(item: CollectionEntry) -> str:
+    return f"{item.collection_id}:{item.series_id}"
+
+
+def _series_tag_id(item: SeriesTag) -> str:
+    return f"{item.series_id}:{item.tag_id}"
+
+
+def _series_warning_id(item: SeriesContentWarning) -> str:
+    return f"{item.series_id}:{item.warning_id}"
 
 
 def _require_reference(reference: str, available: set[str], context: str, target: str) -> None:
@@ -1018,6 +1430,193 @@ def _import_availability(connection, entities, inserted, updated, unchanged) -> 
             updated["availability"] += 1
         else:
             unchanged["availability"] += 1
+
+
+def _import_companies(connection, entities, inserted, updated, unchanged) -> None:
+    for item in entities:
+        _insert_or_compare(
+            connection,
+            table="companies",
+            section="companies",
+            key_columns=("id",),
+            columns=("id", "name", "country", "website_url"),
+            values=(item.id, item.name, item.country, item.website_url),
+            inserted=inserted,
+            unchanged=unchanged,
+            updated=updated,
+            enrichable_columns=("country", "website_url"),
+        )
+
+
+def _import_series_companies(connection, entities, inserted, unchanged) -> None:
+    for item in entities:
+        _insert_or_compare(
+            connection,
+            table="series_companies",
+            section="series_companies",
+            key_columns=("series_id", "company_id", "role"),
+            columns=("series_id", "company_id", "role"),
+            values=(item.series_id, item.company_id, item.role.value),
+            inserted=inserted,
+            unchanged=unchanged,
+        )
+
+
+def _import_collections(connection, entities, inserted, updated, unchanged) -> None:
+    for item in entities:
+        _insert_or_compare(
+            connection,
+            table="collections",
+            section="collections",
+            key_columns=("id",),
+            columns=("id", "title", "kind", "description"),
+            values=(item.id, item.title, item.kind.value, item.description),
+            inserted=inserted,
+            unchanged=unchanged,
+            updated=updated,
+            enrichable_columns=("description",),
+        )
+
+
+def _import_collection_entries(connection, entities, inserted, unchanged) -> None:
+    for item in entities:
+        _insert_or_compare(
+            connection,
+            table="collection_entries",
+            section="collection_entries",
+            key_columns=("collection_id", "series_id"),
+            columns=("collection_id", "series_id", "position"),
+            values=(item.collection_id, item.series_id, item.position),
+            inserted=inserted,
+            unchanged=unchanged,
+        )
+
+
+def _import_seasons(connection, entities, inserted, updated, unchanged) -> None:
+    for item in entities:
+        _insert_or_compare(
+            connection,
+            table="seasons",
+            section="seasons",
+            key_columns=("id",),
+            columns=("id", "series_id", "number", "title", "release_year"),
+            values=(item.id, item.series_id, item.number, item.title, item.release_year),
+            inserted=inserted,
+            unchanged=unchanged,
+            updated=updated,
+            enrichable_columns=("title", "release_year"),
+        )
+
+
+def _import_episodes(connection, entities, inserted, updated, unchanged) -> None:
+    for item in entities:
+        _insert_or_compare(
+            connection,
+            table="episodes",
+            section="episodes",
+            key_columns=("id",),
+            columns=(
+                "id",
+                "season_id",
+                "number",
+                "title",
+                "kind",
+                "air_date",
+                "duration_minutes",
+            ),
+            values=(
+                item.id,
+                item.season_id,
+                item.number,
+                item.title,
+                item.kind.value,
+                item.air_date.isoformat() if item.air_date else None,
+                item.duration_minutes,
+            ),
+            inserted=inserted,
+            unchanged=unchanged,
+            updated=updated,
+            enrichable_columns=("title", "air_date", "duration_minutes"),
+        )
+
+
+def _import_tags(connection, entities, inserted, unchanged) -> None:
+    for item in entities:
+        _insert_or_compare(
+            connection,
+            table="tags",
+            section="tags",
+            key_columns=("id",),
+            columns=("id", "name", "category"),
+            values=(item.id, item.name, item.category.value),
+            inserted=inserted,
+            unchanged=unchanged,
+        )
+
+
+def _import_series_tags(connection, entities, inserted, unchanged) -> None:
+    for item in entities:
+        _insert_or_compare(
+            connection,
+            table="series_tags",
+            section="series_tags",
+            key_columns=("series_id", "tag_id"),
+            columns=("series_id", "tag_id"),
+            values=(item.series_id, item.tag_id),
+            inserted=inserted,
+            unchanged=unchanged,
+        )
+
+
+def _import_content_warnings(connection, entities, inserted, updated, unchanged) -> None:
+    for item in entities:
+        _insert_or_compare(
+            connection,
+            table="content_warnings",
+            section="content_warnings",
+            key_columns=("id",),
+            columns=("id", "name", "description"),
+            values=(item.id, item.name, item.description),
+            inserted=inserted,
+            unchanged=unchanged,
+            updated=updated,
+            enrichable_columns=("description",),
+        )
+
+
+def _import_series_content_warnings(connection, entities, inserted, unchanged) -> None:
+    for item in entities:
+        _insert_or_compare(
+            connection,
+            table="series_content_warnings",
+            section="series_content_warnings",
+            key_columns=("series_id", "warning_id"),
+            columns=("series_id", "warning_id", "severity"),
+            values=(item.series_id, item.warning_id, item.severity.value),
+            inserted=inserted,
+            unchanged=unchanged,
+        )
+
+
+def _import_viewing_guides(connection, entities, inserted, updated, unchanged) -> None:
+    for item in entities:
+        _insert_or_compare(
+            connection,
+            table="viewing_guides",
+            section="viewing_guides",
+            key_columns=("series_id",),
+            columns=("series_id", "drama_level", "ending_type", "ending_note"),
+            values=(
+                item.series_id,
+                item.drama_level.value,
+                item.ending_type.value,
+                item.ending_note,
+            ),
+            inserted=inserted,
+            unchanged=unchanged,
+            updated=updated,
+            enrichable_columns=("ending_note",),
+        )
 
 
 def _import_sources(connection, entities, inserted, unchanged) -> None:
