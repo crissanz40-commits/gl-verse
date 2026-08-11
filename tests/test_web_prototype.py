@@ -90,3 +90,15 @@ def test_web_prototype_does_not_duplicate_catalog_data() -> None:
     assert "function renderReleaseFilters()" in javascript
     assert "function avatarMarkup(actress" in javascript
     assert ".cast-avatar img" in javascript
+
+
+def test_web_prototype_uses_authenticated_personal_library() -> None:
+    html = (WEB_ROOT / "index.html").read_text(encoding="utf-8")
+    javascript = (WEB_ROOT / "app.js").read_text(encoding="utf-8")
+
+    assert 'id="watchlist-dialog"' in html
+    assert "/api/me/library" in javascript
+    assert "X-GL-Verse-CSRF" in javascript
+    assert 'data-personal-form="${item.id}"' in javascript
+    assert "episodesWatched" in javascript
+    assert "personalStatusLabels" in javascript

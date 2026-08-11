@@ -12,13 +12,18 @@ const dramaLevels = ["zero_drama", "light", "moderate", "high"];
 const dramaLabels = { zero_drama: "Sin drama", light: "Suave", moderate: "Moderado", high: "Alto" };
 const endingLabels = { happy_ever_after: "Feliz para siempre", happy_for_now: "Feliz por ahora", bittersweet: "Agridulce", open: "Abierto", sad: "Triste", tragic: "Trágico", unknown: "Sin confirmar" };
 const companyRoleLabels = { producer: "Producción", broadcaster: "Emisión", distributor: "Distribución" };
+const personalStatusLabels = { want_to_watch: "Quiero verla", watching: "Viendo", watched: "Vista", paused: "En pausa", dropped: "Abandonada" };
 const state = { search: "", provider: "", pairings: [], country: "", releaseMonth: "", releaseYear: "", drama: 3, endings: [], comfort: false, tag: "", sort: "newest", saved: new Set(), detailTrail: [] };
 const grid = document.querySelector("#series-grid");
 const resultCount = document.querySelector("#result-count");
 const activeFilters = document.querySelector("#active-filters");
 const emptyState = document.querySelector("#empty-state");
 const dialog = document.querySelector("#detail-dialog");
+const watchlistDialog = document.querySelector("#watchlist-dialog");
 const sessionStorageKey = "glv_session";
+let authSession = null;
+let personalEntries = new Map();
+let watchlistStatus = "all";
 
 function sessionHeaders(headers = {}) {
   const sessionToken = window.sessionStorage.getItem(sessionStorageKey);
@@ -38,6 +43,7 @@ async function loadIdentity() {
       await setupGoogleLogin(login);
       return;
     }
+    authSession = session;
     const logout = document.createElement("a");
     logout.href = "#logout";
     logout.textContent = `Salir · ${session.user.name || session.user.email}`;
@@ -53,9 +59,78 @@ async function loadIdentity() {
     });
     login.replaceChildren(logout);
     document.querySelector("#admin-link").hidden = session.user.role !== "admin";
+    await loadPersonalLibrary();
   } catch {
     // El catálogo público sigue disponible aunque falle la sesión.
   }
+}
+
+const escapeHtml = (value) => String(value ?? "").replace(/[&<>"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[character]);
+
+async function personalRequest(path, options = {}) {
+  const response = await fetch(path, {
+    ...options,
+    headers: sessionHeaders({
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(["PUT", "DELETE"].includes(options.method) ? { "X-GL-Verse-CSRF": authSession?.csrfToken || "" } : {}),
+      ...(options.headers || {}),
+    }),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "No se pudo actualizar tu lista");
+  return result;
+}
+
+async function loadPersonalLibrary() {
+  const result = await personalRequest("/api/me/library");
+  personalEntries = new Map(result.entries.map((entry) => [entry.seriesId, entry]));
+  state.saved = new Set(personalEntries.keys());
+  renderPersonalState();
+}
+
+function renderPersonalState() {
+  document.querySelector("#saved-count").textContent = personalEntries.size;
+  renderCards();
+  renderWatchlist();
+  const current = dialog.dataset.current?.split(":");
+  if (dialog.open && current?.[0] === "series") showDetail("series", current[1], false);
+}
+
+function personalForm(item) {
+  if (!authSession) return `<section class="personal-card signed-out"><p class="section-kicker">MI SEGUIMIENTO</p><strong>Inicia sesión para crear tu lista</strong><p>Tu progreso, notas y opiniones quedarán asociados únicamente a tu cuenta.</p></section>`;
+  const entry = personalEntries.get(item.id);
+  const totalEpisodes = item.seasons.reduce((total, season) => total + season.episodes.length, 0);
+  const ratingOptions = Array.from({ length: 10 }, (_, index) => index + 1).map((score) => `<option value="${score}" ${entry?.rating === score ? "selected" : ""}>${score}/10</option>`).join("");
+  const statusOptions = Object.entries(personalStatusLabels).map(([value, label]) => `<option value="${value}" ${entry?.status === value ? "selected" : ""}>${label}</option>`).join("");
+  return `<section class="personal-card">
+    <div class="personal-heading"><div><p class="section-kicker">MI SEGUIMIENTO</p><h3>${entry ? personalStatusLabels[entry.status] : "Añadir a mi lista"}</h3></div>${entry ? `<span>Actualizada ${new Date(entry.updatedAt).toLocaleDateString("es")}</span>` : ""}</div>
+    <form data-personal-form="${item.id}">
+      <label>Estado<select name="status">${statusOptions}</select></label>
+      <label>Episodios vistos<span class="episode-input"><input name="episodesWatched" type="number" min="0" max="${totalEpisodes || 9999}" value="${entry?.episodesWatched ?? 0}" /><small>${totalEpisodes ? `de ${totalEpisodes}` : "total por confirmar"}</small></span></label>
+      <label>Mi nota<select name="rating"><option value="">Sin puntuar</option>${ratingOptions}</select></label>
+      <label>Empecé el<input name="startedOn" type="date" value="${entry?.startedOn || ""}" /></label>
+      <label>Terminé el<input name="completedOn" type="date" value="${entry?.completedOn || ""}" /></label>
+      <label class="review-field">Mi opinión<textarea name="review" maxlength="2000" rows="4" placeholder="¿Qué te gustó? ¿La recomendarías?">${escapeHtml(entry?.review || "")}</textarea><small>Privada · máximo 2000 caracteres</small></label>
+      <div class="personal-actions"><button class="primary-button" type="submit">Guardar cambios</button>${entry ? '<button class="danger-button" type="button" data-delete-personal>Eliminar de mi lista</button>' : ""}<span class="personal-feedback" aria-live="polite"></span></div>
+    </form>
+  </section>`;
+}
+
+function renderWatchlist() {
+  const tabs = document.querySelector("#watchlist-tabs");
+  const list = document.querySelector("#watchlist-grid");
+  if (!tabs || !list) return;
+  const counts = Object.fromEntries(Object.keys(personalStatusLabels).map((status) => [status, [...personalEntries.values()].filter((entry) => entry.status === status).length]));
+  tabs.innerHTML = [["all", "Todas"], ...Object.entries(personalStatusLabels)].map(([value, label]) => `<button type="button" class="${watchlistStatus === value ? "active" : ""}" data-watchlist-status="${value}">${label}<span>${value === "all" ? personalEntries.size : counts[value]}</span></button>`).join("");
+  if (!authSession) {
+    list.innerHTML = '<div class="watchlist-empty"><strong>Inicia sesión para usar Mi lista</strong><p>Guarda series, controla tu progreso y conserva tus valoraciones en cualquier dispositivo.</p></div>';
+    return;
+  }
+  const entries = [...personalEntries.values()].filter((entry) => watchlistStatus === "all" || entry.status === watchlistStatus);
+  list.innerHTML = entries.length ? entries.map((entry) => `<button class="watchlist-row" type="button" data-watchlist-open="${entry.seriesId}">
+    <span class="watchlist-cover">${entry.coverImageUrl ? `<img src="${entry.coverImageUrl}" alt="" />` : "GL"}</span>
+    <span><small>${personalStatusLabels[entry.status]}</small><strong>${escapeHtml(entry.title)}</strong><em>${entry.totalEpisodes ? `${entry.episodesWatched}/${entry.totalEpisodes} episodios` : `${entry.episodesWatched} episodios`}${entry.rating ? ` · ${entry.rating}/10` : ""}</em></span><b>Editar →</b>
+  </button>`).join("") : '<div class="watchlist-empty"><strong>Aquí todavía no hay series</strong><p>Añádelas desde el corazón de una portada o desde su ficha.</p></div>';
 }
 
 function loadGoogleLibrary() {
@@ -188,7 +263,7 @@ function renderCards() {
         <div class="poster-top"><span class="rank">#${index + 1}</span><button class="save-button ${state.saved.has(item.id) ? "saved" : ""}" type="button" data-save="${item.id}" aria-label="Guardar ${item.title}">${state.saved.has(item.id) ? "♥" : "♡"}</button></div>
         <div class="poster-title"><small>${item.country.toUpperCase()} · ${item.year}</small><strong>${item.title}</strong></div>
       </div>
-      <div class="card-info"><h3>${item.title}</h3><span class="card-meta">${formatReleaseDate(item.releaseDate)} · ${statusLabels[item.status] || item.status}</span>${item.reviewStatus === "approved" ? '<span class="review-badge">✓ Ficha revisada</span>' : ""}<div class="pair-row"><span class="pair-name">♡ ${pairingSummary(item)}</span></div></div>
+      <div class="card-info"><h3>${item.title}</h3><span class="card-meta">${formatReleaseDate(item.releaseDate)} · ${statusLabels[item.status] || item.status}</span>${personalEntries.has(item.id) ? `<span class="personal-status">${personalStatusLabels[personalEntries.get(item.id).status]}${personalEntries.get(item.id).rating ? ` · ${personalEntries.get(item.id).rating}/10` : ""}</span>` : ""}${item.reviewStatus === "approved" ? '<span class="review-badge">✓ Ficha revisada</span>' : ""}<div class="pair-row"><span class="pair-name">♡ ${pairingSummary(item)}</span></div></div>
     </article>`).join("");
   emptyState.hidden = items.length > 0;
   renderActiveFilters();
@@ -278,6 +353,7 @@ function seriesDetail(item) {
       <aside>${mediaMarkup(item, "cover", `Portada de ${item.title}`)}</aside>
       <div class="detail-main"><p class="eyebrow">${item.country.toUpperCase()} · ${formatReleaseDate(item.releaseDate).toUpperCase()}</p><h2>${item.title}</h2><p class="detail-lead">${item.synopsis}</p>${item.releaseDateSourceUrl ? `<a class="release-source" href="${item.releaseDateSourceUrl}" target="_blank" rel="noreferrer">Fuente de la fecha de estreno ↗</a>` : ""}
         <div class="score-strip"><span><small>ESTADO</small><strong>${statusLabels[item.status] || item.status}</strong></span><span><small>ESTRENO</small><strong>${item.year}</strong></span><span><small>PAÍS</small><strong>${item.country}</strong></span><span><small>REPARTO</small><strong>${item.cast.length}</strong></span></div>
+        ${personalForm(item)}
         <section class="detail-section"><p class="section-kicker">DÓNDE VER</p><div class="availability-list">${availabilityCards || '<p class="pending-copy">Disponibilidad pendiente de verificar.</p>'}</div></section>
         ${guideCard}
         ${tagCards ? `<section class="detail-section"><p class="section-kicker">ETIQUETAS</p><div class="metadata-chips">${tagCards}</div></section>` : ""}
@@ -350,11 +426,46 @@ function resetFilters() {
   renderProviders(); renderCards();
 }
 
-document.addEventListener("click", (event) => {
+document.addEventListener("click", async (event) => {
   const provider = event.target.closest("[data-provider]");
   if (provider) { state.provider = provider.dataset.provider; renderProviders(); renderCards(); }
   const save = event.target.closest("[data-save]");
-  if (save) { event.stopPropagation(); state.saved.has(save.dataset.save) ? state.saved.delete(save.dataset.save) : state.saved.add(save.dataset.save); document.querySelector("#saved-count").textContent = state.saved.size; renderCards(); return; }
+  if (save) {
+    event.stopPropagation();
+    if (!authSession) { document.querySelector("#google-login").scrollIntoView({ behavior: "smooth" }); return; }
+    try {
+      const existing = personalEntries.get(save.dataset.save);
+      if (existing) {
+        await personalRequest(`/api/me/library/${encodeURIComponent(save.dataset.save)}`, { method: "DELETE" });
+        personalEntries.delete(save.dataset.save);
+      } else {
+        const entry = await personalRequest(`/api/me/library/${encodeURIComponent(save.dataset.save)}`, {
+          method: "PUT",
+          body: JSON.stringify({ status: "want_to_watch", episodesWatched: 0, rating: null, review: null, startedOn: null, completedOn: null }),
+        });
+        personalEntries.set(entry.seriesId, entry);
+      }
+      state.saved = new Set(personalEntries.keys());
+      renderPersonalState();
+    } catch (error) { window.alert(error.message); }
+    return;
+  }
+  const watchlistFilter = event.target.closest("[data-watchlist-status]");
+  if (watchlistFilter) { watchlistStatus = watchlistFilter.dataset.watchlistStatus; renderWatchlist(); return; }
+  const watchlistOpen = event.target.closest("[data-watchlist-open]");
+  if (watchlistOpen) { watchlistDialog.close(); showDetail("series", watchlistOpen.dataset.watchlistOpen); return; }
+  if (event.target.closest(".watchlist-button")) { renderWatchlist(); watchlistDialog.showModal(); return; }
+  if (event.target.closest("[data-delete-personal]")) {
+    const form = event.target.closest("form");
+    if (!window.confirm("¿Eliminar esta serie y todo su seguimiento personal?")) return;
+    try {
+      await personalRequest(`/api/me/library/${encodeURIComponent(form.dataset.personalForm)}`, { method: "DELETE" });
+      personalEntries.delete(form.dataset.personalForm);
+      state.saved = new Set(personalEntries.keys());
+      renderPersonalState();
+    } catch (error) { form.querySelector(".personal-feedback").textContent = error.message; }
+    return;
+  }
   const opener = event.target.closest("[data-open]");
   if (opener) { const [type, id] = opener.dataset.open.split(":"); showDetail(type, id); }
   if (event.target.closest("[data-open-featured]")) showDetail("series", "gap-2022");
@@ -364,6 +475,31 @@ document.addEventListener("click", (event) => {
   if (event.target.closest("[data-reset]")) resetFilters();
   const remove = event.target.closest("[data-remove-filter]");
   if (remove) { const [type, value] = remove.dataset.removeFilter.split(":"); if (type === "search") { state.search = ""; document.querySelector("#search-input").value = ""; } if (type === "provider") { state.provider = ""; renderProviders(); } if (type === "drama") { state.drama = 3; document.querySelector("#drama-filter").value = 3; document.querySelector("#drama-value").textContent = 3; } if (type === "comfort") { state.comfort = false; document.querySelector("#comfort-toggle").setAttribute("aria-checked", "false"); } if (type === "ending") state.endings = state.endings.filter((ending) => ending !== value); if (type === "tag") { state.tag = ""; document.querySelector("#tag-filter").value = ""; } if (type === "pairing") state.pairings = state.pairings.filter((role) => role !== value); if (type === "country") { state.country = ""; document.querySelector("#country-filter").value = ""; } if (type === "releaseMonth") { state.releaseMonth = ""; document.querySelector("#release-month-filter").value = ""; } if (type === "releaseYear") { state.releaseYear = ""; document.querySelector("#release-year-filter").value = ""; } renderCards(); }
+});
+
+document.addEventListener("submit", async (event) => {
+  const form = event.target.closest("[data-personal-form]");
+  if (!form) return;
+  event.preventDefault();
+  const feedback = form.querySelector(".personal-feedback");
+  const values = new FormData(form);
+  feedback.textContent = "Guardando…";
+  try {
+    const entry = await personalRequest(`/api/me/library/${encodeURIComponent(form.dataset.personalForm)}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        status: values.get("status"),
+        episodesWatched: Number(values.get("episodesWatched")),
+        rating: values.get("rating") ? Number(values.get("rating")) : null,
+        review: values.get("review") || null,
+        startedOn: values.get("startedOn") || null,
+        completedOn: values.get("completedOn") || null,
+      }),
+    });
+    personalEntries.set(entry.seriesId, entry);
+    state.saved = new Set(personalEntries.keys());
+    renderPersonalState();
+  } catch (error) { feedback.textContent = error.message; }
 });
 
 document.addEventListener("error", (event) => {
@@ -383,6 +519,8 @@ document.querySelector("#comfort-toggle").addEventListener("click", (event) => {
 document.querySelector("#reset-filters").addEventListener("click", resetFilters);
 document.querySelector(".dialog-close").addEventListener("click", () => { state.detailTrail = []; dialog.close(); });
 dialog.addEventListener("click", (event) => { if (event.target === dialog) { state.detailTrail = []; dialog.close(); } });
+watchlistDialog.querySelector(".dialog-close").addEventListener("click", () => watchlistDialog.close());
+watchlistDialog.addEventListener("click", (event) => { if (event.target === watchlistDialog) watchlistDialog.close(); });
 document.addEventListener("keydown", (event) => { if ((event.metaKey || event.ctrlKey) && event.key === "k") { event.preventDefault(); document.querySelector("#search-input").focus(); } if (event.key === "Enter" && event.target.matches("[data-open]") && event.target.getAttribute("role") === "button") { const [type, id] = event.target.dataset.open.split(":"); showDetail(type, id); } });
 
 async function loadCatalog() {

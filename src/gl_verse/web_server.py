@@ -32,6 +32,15 @@ from gl_verse.admin_catalog import (
 from gl_verse.catalog_api import catalog_payload
 from gl_verse.catalog_review import ReviewStatus, UnknownSeriesError
 from gl_verse.database import connect_database
+from gl_verse.personal_library import (
+    PersonalLibraryError,
+    delete_entry,
+    list_entries,
+    save_entry,
+)
+from gl_verse.personal_library import (
+    UnknownSeriesError as UnknownPersonalSeriesError,
+)
 
 DEFAULT_WEB_ROOT = Path(__file__).parents[2] / "web"
 
@@ -58,6 +67,10 @@ class CatalogRequestHandler(SimpleHTTPRequestHandler):
             self._send_session()
         elif path == "/api/auth/google/start":
             self._start_google(parse_qs(parsed.query))
+        elif path == "/api/me/library":
+            session = self._require_session()
+            if session:
+                self._send_personal_library(session)
         elif path == "/api/admin/series":
             if self._require_admin():
                 self._send_admin_series()
@@ -88,6 +101,11 @@ class CatalogRequestHandler(SimpleHTTPRequestHandler):
     def do_PUT(self) -> None:
         path = urlparse(self.path).path
         parts = path.split("/")
+        if len(parts) == 5 and parts[1:4] == ["api", "me", "library"]:
+            session = self._require_session(require_csrf=True)
+            if session:
+                self._save_personal_entry(session, unquote(parts[4]))
+            return
         if len(parts) in {5, 6} and parts[1:4] == ["api", "admin", "series"]:
             session = self._require_admin(require_csrf=True)
             if session is None:
@@ -99,6 +117,19 @@ class CatalogRequestHandler(SimpleHTTPRequestHandler):
             if len(parts) == 5:
                 self._admin_update_series(session, series_id)
                 return
+        if path.startswith("/api/"):
+            self._send_json({"error": "Recurso no encontrado"}, HTTPStatus.NOT_FOUND)
+        else:
+            self._send_json({"error": "Método no permitido"}, HTTPStatus.METHOD_NOT_ALLOWED)
+
+    def do_DELETE(self) -> None:
+        path = urlparse(self.path).path
+        parts = path.split("/")
+        if len(parts) == 5 and parts[1:4] == ["api", "me", "library"]:
+            session = self._require_session(require_csrf=True)
+            if session:
+                self._delete_personal_entry(session, unquote(parts[4]))
+            return
         if path.startswith("/api/"):
             self._send_json({"error": "Recurso no encontrado"}, HTTPStatus.NOT_FOUND)
         else:
@@ -243,6 +274,49 @@ class CatalogRequestHandler(SimpleHTTPRequestHandler):
             self._send_json({"error": "No se pudo consultar el backoffice"}, HTTPStatus.INTERNAL_SERVER_ERROR)
             return
         self._send_json({"series": payload})
+
+    def _send_personal_library(self, session: AppSession) -> None:
+        try:
+            with closing(connect_database(self.database_path)) as connection:
+                entries = list_entries(connection, session.user.subject)
+        except sqlite3.Error:
+            self._send_json(
+                {"error": "No se pudo consultar tu lista"},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+            return
+        self._send_json({"entries": entries})
+
+    def _save_personal_entry(self, session: AppSession, series_id: str) -> None:
+        try:
+            payload = self._read_json()
+            with closing(connect_database(self.database_path)) as connection:
+                entry = save_entry(connection, session.user.subject, series_id, payload)
+        except UnknownPersonalSeriesError:
+            self._send_json({"error": "Serie no encontrada"}, HTTPStatus.NOT_FOUND)
+            return
+        except (PersonalLibraryError, json.JSONDecodeError) as error:
+            self._send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+            return
+        except sqlite3.Error:
+            self._send_json(
+                {"error": "No se pudo guardar tu seguimiento"},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+            return
+        self._send_json(entry)
+
+    def _delete_personal_entry(self, session: AppSession, series_id: str) -> None:
+        try:
+            with closing(connect_database(self.database_path)) as connection:
+                delete_entry(connection, session.user.subject, series_id)
+        except sqlite3.Error:
+            self._send_json(
+                {"error": "No se pudo eliminar la serie de tu lista"},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+            return
+        self._send_json({"status": "deleted"})
 
     def _read_json(self) -> Any:
         content_length = int(self.headers.get("Content-Length", "0"))
