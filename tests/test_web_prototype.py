@@ -15,8 +15,10 @@ def test_web_prototype_has_all_static_assets() -> None:
 def test_admin_prototype_uses_authenticated_api() -> None:
     html = (WEB_ROOT / "admin.html").read_text(encoding="utf-8")
     javascript = (WEB_ROOT / "admin.js").read_text(encoding="utf-8")
+    stylesheet = (WEB_ROOT / "admin.css").read_text(encoding="utf-8")
 
     assert 'id="google-login"' in html
+    assert "[hidden] { display:none !important; }" in stylesheet
     assert 'id="series-form"' in html
     assert "/api/auth/google/start" in javascript
     assert "accounts.google.com/gsi/client" in javascript

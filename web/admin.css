@@ -1,5 +1,6 @@
 :root { --ink:#281828; --muted:#766b76; --plum:#6f285f; --pink:#d85b91; --soft:#f7f1f5; --line:#e7dce4; --green:#5d7717; }
 * { box-sizing:border-box; }
+[hidden] { display:none !important; }
 body { margin:0; color:var(--ink); background:#f2edf3; font:14px system-ui,-apple-system,"Segoe UI",sans-serif; }
 button,input,select,textarea { font:inherit; }
 button { padding:11px 16px; color:white; background:var(--plum); border:0; border-radius:9px; cursor:pointer; font-weight:700; }
