@@ -114,6 +114,38 @@ def test_version_three_upgrades_without_losing_gap() -> None:
     connection.close()
 
 
+def test_version_eight_upgrades_without_losing_existing_pairings() -> None:
+    connection = connect_database(":memory:")
+    initialize_database(connection, target_version=8)
+    before = [
+        tuple(row)
+        for row in connection.execute(
+            """
+            SELECT id, series_id, acting_pair_id, first_character_id,
+                   second_character_id, role
+            FROM series_pairings ORDER BY id
+            """
+        )
+    ]
+
+    initialize_database(connection)
+
+    after = [
+        tuple(row)
+        for row in connection.execute(
+            """
+            SELECT id, series_id, acting_pair_id, first_character_id,
+                   second_character_id, role
+            FROM series_pairings ORDER BY id
+            """
+        )
+    ]
+    assert before
+    assert after == before
+    assert get_schema_version(connection) == SCHEMA_VERSION
+    connection.close()
+
+
 def test_series_and_actress_images_require_a_source(
     connection: sqlite3.Connection,
 ) -> None:
@@ -267,4 +299,117 @@ def test_series_pairing_must_match_the_actual_cast(
                 'sam-gap', 'unknown-gap', 'main'
             )
             """
+        )
+
+
+def test_character_pairing_can_exist_without_an_acting_pair(
+    connection: sqlite3.Connection,
+) -> None:
+    _insert_series(connection, "fictional-pair-series", "Fictional Pair Series")
+    connection.execute(
+        "INSERT INTO characters (id, name, series_id) VALUES (?, ?, ?)",
+        ("first-fictional", "First", "fictional-pair-series"),
+    )
+    connection.execute(
+        "INSERT INTO characters (id, name, series_id) VALUES (?, ?, ?)",
+        ("second-fictional", "Second", "fictional-pair-series"),
+    )
+
+    connection.execute(
+        """
+        INSERT INTO series_pairings (
+            id, series_id, first_character_id, second_character_id, role
+        ) VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            "fictional-pairing",
+            "fictional-pair-series",
+            "first-fictional",
+            "second-fictional",
+            "main",
+        ),
+    )
+
+    assert connection.execute(
+        "SELECT acting_pair_id FROM series_pairings WHERE id = 'fictional-pairing'"
+    ).fetchone()[0] is None
+
+
+def test_deleting_acting_pair_preserves_character_pairing(
+    connection: sqlite3.Connection,
+) -> None:
+    _insert_person(connection, "freen-sarocha", "Freen")
+    _insert_person(connection, "becky-armstrong", "Becky")
+    _insert_acting_pair(connection)
+    _insert_character_and_credit(connection, "gap-2022", "freen-sarocha", "sam-gap")
+    _insert_character_and_credit(connection, "gap-2022", "becky-armstrong", "mon-gap")
+    connection.execute(
+        """
+        INSERT INTO series_pairings (
+            id, series_id, acting_pair_id, first_character_id,
+            second_character_id, role
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        ("sam-mon-gap", "gap-2022", "freenbecky", "sam-gap", "mon-gap", "main"),
+    )
+
+    connection.execute("DELETE FROM acting_pairs WHERE id = 'freenbecky'")
+
+    row = connection.execute(
+        "SELECT acting_pair_id FROM series_pairings WHERE id = 'sam-mon-gap'"
+    ).fetchone()
+    assert row is not None
+    assert row["acting_pair_id"] is None
+
+
+def test_character_pairing_cannot_be_duplicated_in_reverse_order(
+    connection: sqlite3.Connection,
+) -> None:
+    test_character_pairing_can_exist_without_an_acting_pair(connection)
+
+    with pytest.raises(sqlite3.IntegrityError, match="UNIQUE"):
+        connection.execute(
+            """
+            INSERT INTO series_pairings (
+                id, series_id, first_character_id, second_character_id, role
+            ) VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                "reversed-fictional-pairing",
+                "fictional-pair-series",
+                "second-fictional",
+                "first-fictional",
+                "supporting",
+            ),
+        )
+
+
+def test_character_pairing_characters_must_belong_to_the_series(
+    connection: sqlite3.Connection,
+) -> None:
+    _insert_series(connection, "first-series", "First Series")
+    _insert_series(connection, "second-series", "Second Series")
+    connection.execute(
+        "INSERT INTO characters (id, name, series_id) VALUES (?, ?, ?)",
+        ("first-series-character", "First", "first-series"),
+    )
+    connection.execute(
+        "INSERT INTO characters (id, name, series_id) VALUES (?, ?, ?)",
+        ("second-series-character", "Second", "second-series"),
+    )
+
+    with pytest.raises(sqlite3.IntegrityError, match="FOREIGN KEY"):
+        connection.execute(
+            """
+            INSERT INTO series_pairings (
+                id, series_id, first_character_id, second_character_id, role
+            ) VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                "cross-series-pairing",
+                "first-series",
+                "first-series-character",
+                "second-series-character",
+                "main",
+            ),
         )

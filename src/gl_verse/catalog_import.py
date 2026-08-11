@@ -186,7 +186,9 @@ def import_catalog(
         _import_characters(connection, document.characters, inserted, unchanged)
         _import_credits(connection, document.credits, inserted, unchanged)
         _import_acting_pairs(connection, document.acting_pairs, inserted, updated, unchanged)
-        _import_series_pairings(connection, document.series_pairings, inserted, unchanged)
+        _import_series_pairings(
+            connection, document.series_pairings, inserted, updated, unchanged
+        )
         _import_availability(connection, document.availability, inserted, updated, unchanged)
         _import_provenance(connection, document.provenance, inserted, unchanged)
         if dry_run:
@@ -377,13 +379,13 @@ def _parse_series_pairing(value: Any, index: int) -> SeriesPairing:
         value,
         "series_pairings",
         index,
-        {"id", "series_id", "acting_pair_id", "character_ids", "role"},
-        set(),
+        {"id", "series_id", "character_ids", "role"},
+        {"acting_pair_id"},
     )
     return SeriesPairing(
         id=item["id"],
         series_id=item["series_id"],
-        acting_pair_id=item["acting_pair_id"],
+        acting_pair_id=item.get("acting_pair_id"),
         character_ids=_pair(item["character_ids"], f"series_pairings[{index}].character_ids"),
         role=PairingRole(item["role"]),
     )
@@ -467,6 +469,10 @@ def _reject_document_duplicates(document: CatalogDocument) -> None:
         _unique((entity.id for entity in entities), f"identificador repetido en {section}")
 
     _unique(
+        ((item.series_id, *sorted(item.character_ids)) for item in document.series_pairings),
+        "pareja ficticia repetida",
+    )
+    _unique(
         ((item.series_id, item.platform_id, item.territory) for item in document.availability),
         "disponibilidad repetida",
     )
@@ -546,6 +552,34 @@ def _reject_database_duplicates(connection: sqlite3.Connection, document: Catalo
                 f"{row['id']!r} ({row['name']})"
             )
 
+    for item in document.series_pairings:
+        if connection.execute(
+            "SELECT 1 FROM series_pairings WHERE id = ?", (item.id,)
+        ).fetchone():
+            continue
+        row = connection.execute(
+            """
+            SELECT id FROM series_pairings
+            WHERE series_id = ?
+              AND (
+                  (first_character_id = ? AND second_character_id = ?)
+                  OR (first_character_id = ? AND second_character_id = ?)
+              )
+            LIMIT 1
+            """,
+            (
+                item.series_id,
+                item.character_ids[0],
+                item.character_ids[1],
+                item.character_ids[1],
+                item.character_ids[0],
+            ),
+        ).fetchone()
+        if row:
+            raise CatalogConflictError(
+                f"Posible pareja ficticia duplicada: {item.id!r} coincide con {row['id']!r}"
+            )
+
 
 def _validate_references(connection: sqlite3.Connection, document: CatalogDocument) -> None:
     available = {
@@ -581,9 +615,13 @@ def _validate_references(connection: sqlite3.Connection, document: CatalogDocume
             _require_reference(person_id, available["people"], f"pareja {item.id}", "persona")
     for item in document.series_pairings:
         _require_reference(item.series_id, available["series"], f"relación {item.id}", "serie")
-        _require_reference(
-            item.acting_pair_id, available["acting_pairs"], f"relación {item.id}", "pareja"
-        )
+        if item.acting_pair_id is not None:
+            _require_reference(
+                item.acting_pair_id,
+                available["acting_pairs"],
+                f"relación {item.id}",
+                "pareja",
+            )
         for character_id in item.character_ids:
             _require_reference(
                 character_id, available["characters"], f"relación {item.id}", "personaje"
@@ -883,7 +921,7 @@ def _import_acting_pairs(connection, entities, inserted, updated, unchanged) -> 
         )
 
 
-def _import_series_pairings(connection, entities, inserted, unchanged) -> None:
+def _import_series_pairings(connection, entities, inserted, updated, unchanged) -> None:
     columns = (
         "id",
         "series_id",
@@ -908,6 +946,8 @@ def _import_series_pairings(connection, entities, inserted, unchanged) -> None:
             ),
             inserted=inserted,
             unchanged=unchanged,
+            updated=updated,
+            enrichable_columns=("acting_pair_id",),
         )
 
 

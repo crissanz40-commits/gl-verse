@@ -39,7 +39,10 @@ def test_web_prototype_loads_relational_catalog_from_api() -> None:
     assert 'showDetail("series"' in javascript
     assert 'data-open="pair:' in javascript
     assert 'data-open="actress:' in javascript
+    assert "Pareja artística no registrada" in javascript
     assert "Sin pareja en esta serie" in javascript
+    assert "pairing.characters.includes(credit.character)" in javascript
+    assert "pair?.name" in javascript
 
 
 def test_web_prototype_does_not_duplicate_catalog_data() -> None:

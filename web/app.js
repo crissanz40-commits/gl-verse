@@ -45,7 +45,7 @@ function mediaMarkup(item, kind, label, showSource = true) {
 function pairingSummary(item) {
   const summary = pairingsForSeries(item.id).map((seriesPairing) => {
     const pair = byId(actingPairs, seriesPairing.pairId);
-    return `${seriesPairing.characters.join(" · ")} · ${pair.name}`;
+    return `${seriesPairing.characters.join(" · ")} · ${pair?.name || "Pareja artística no registrada"}`;
   }).join(" · ");
   return summary || "Sin pareja registrada";
 }
@@ -139,6 +139,12 @@ function seriesDetail(item) {
   const pairings = pairingsForSeries(item.id);
   const pairCards = pairings.map((seriesPairing) => {
     const pair = byId(actingPairs, seriesPairing.pairId);
+    if (!pair) {
+      return `<div class="relation-card pair-relation">
+        <span class="relation-avatar" style="--media-start:#8b7182;--media-end:#c9a9bc">♡</span>
+        <span><small>${roleLabels[seriesPairing.role]}</small><strong>${seriesPairing.characters.join(" · ")}</strong><em>Pareja artística no registrada</em></span>
+      </div>`;
+    }
     return `<button class="relation-card pair-relation" type="button" data-open="pair:${pair.id}">
       <span class="relation-avatar" style="--media-start:${pair.colors[0]};--media-end:${pair.colors[1]}">${pair.initials}</span>
       <span><small>${roleLabels[seriesPairing.role]}</small><strong>${seriesPairing.characters.join(" · ")}</strong><em>${pair.name} →</em></span>
@@ -146,8 +152,9 @@ function seriesDetail(item) {
   }).join("");
   const castCards = item.cast.map((credit) => {
     const actress = byId(actresses, credit.actressId);
-    const paired = pairings.find((seriesPairing) => byId(actingPairs, seriesPairing.pairId).actressIds.includes(actress.id));
-    const status = paired ? byId(actingPairs, paired.pairId).name : "Sin pareja en esta serie";
+    const characterPairing = pairings.find((pairing) => pairing.characters.includes(credit.character));
+    const actingPair = characterPairing ? byId(actingPairs, characterPairing.pairId) : null;
+    const status = actingPair?.name || (characterPairing ? "Pareja artística no registrada" : "Sin pareja en esta serie");
     return `<button class="cast-row" type="button" data-open="actress:${actress.id}">
       ${avatarMarkup(actress)}
       <span><strong>${actress.stageName}</strong><small>${credit.character} · ${importanceLabels[credit.importance]}</small></span><em>${status} →</em>
@@ -190,8 +197,9 @@ function pairDetail(pair) {
 function actressDetail(actress) {
   const credits = actressCredits(actress.id);
   const history = credits.map((credit) => {
-    const seriesPairing = pairingsForSeries(credit.series.id).find((pairing) => byId(actingPairs, pairing.pairId).actressIds.includes(actress.id));
-    const pairText = seriesPairing ? `Con ${byId(actingPairs, seriesPairing.pairId).name}` : "Sin pareja en esta serie";
+    const characterPairing = pairingsForSeries(credit.series.id).find((pairing) => pairing.characters.includes(credit.character));
+    const actingPair = characterPairing ? byId(actingPairs, characterPairing.pairId) : null;
+    const pairText = actingPair ? `Con ${actingPair.name}` : characterPairing ? "Pareja artística no registrada" : "Sin pareja en esta serie";
     return `<button class="history-row" type="button" data-open="series:${credit.series.id}"><span class="history-year">${credit.series.year}</span><span><strong>${credit.series.title}</strong><small>${credit.character} · ${importanceLabels[credit.importance]} · ${pairText}</small></span><em>Ver serie →</em></button>`;
   }).join("");
   const pairCards = pairsForActress(actress.id).map((pair) => `<button class="compact-pair" type="button" data-open="pair:${pair.id}"><span style="--media-start:${pair.colors[0]};--media-end:${pair.colors[1]}">${pair.initials}</span><strong>${pair.name}</strong><em>Ver pareja →</em></button>`).join("");

@@ -199,6 +199,60 @@ def test_second_import_is_idempotent(connection, catalog_data) -> None:
     assert summary.unchanged_total == 15
 
 
+def test_imports_character_pairing_without_an_acting_pair(connection, catalog_data) -> None:
+    del catalog_data["series_pairings"][0]["acting_pair_id"]
+
+    document = parse_catalog(catalog_data)
+    first = import_catalog(connection, document)
+    second = import_catalog(connection, document)
+
+    assert first.inserted["series_pairings"] == 1
+    assert second.unchanged_total == 15
+    assert connection.execute(
+        "SELECT acting_pair_id FROM series_pairings WHERE id = 'one-two-sample'"
+    ).fetchone()[0] is None
+
+
+def test_import_enriches_character_pairing_with_verified_acting_pair(
+    connection, catalog_data
+) -> None:
+    acting_pair_id = catalog_data["series_pairings"][0].pop("acting_pair_id")
+    import_catalog(connection, parse_catalog(catalog_data))
+    catalog_data["series_pairings"][0]["acting_pair_id"] = acting_pair_id
+
+    summary = import_catalog(connection, parse_catalog(catalog_data))
+
+    assert summary.updated["series_pairings"] == 1
+    assert connection.execute(
+        "SELECT acting_pair_id FROM series_pairings WHERE id = 'one-two-sample'"
+    ).fetchone()[0] == "sample-pair"
+
+
+def test_rejects_reversed_duplicate_character_pairing(catalog_data) -> None:
+    catalog_data["series_pairings"].append(
+        {
+            "id": "two-one-sample",
+            "series_id": "sample-series-2026",
+            "character_ids": ["two-sample", "one-sample"],
+            "role": "supporting",
+        }
+    )
+
+    with pytest.raises(CatalogImportError, match="pareja ficticia repetida"):
+        parse_catalog(catalog_data)
+
+
+def test_rejects_existing_character_pairing_under_another_id(
+    connection, catalog_data
+) -> None:
+    import_catalog(connection, parse_catalog(catalog_data))
+    catalog_data["series_pairings"][0]["id"] = "another-pairing-id"
+    catalog_data["series_pairings"][0]["character_ids"].reverse()
+
+    with pytest.raises(CatalogConflictError, match="Posible pareja ficticia duplicada"):
+        import_catalog(connection, parse_catalog(catalog_data))
+
+
 def test_legacy_import_without_release_date_remains_idempotent(connection, catalog_data) -> None:
     import_catalog(connection, parse_catalog(catalog_data))
     del catalog_data["series"][0]["release_date"]
