@@ -2,8 +2,7 @@ import json
 import threading
 from http.cookiejar import CookieJar
 from urllib.error import HTTPError
-from urllib.parse import parse_qs, urlparse
-from urllib.request import HTTPCookieProcessor, HTTPRedirectHandler, Request, build_opener, urlopen
+from urllib.request import HTTPCookieProcessor, Request, build_opener, urlopen
 
 import pytest
 
@@ -23,31 +22,28 @@ def connection():
 
 class FakeGoogleClient:
     def __init__(self, identity: GoogleIdentity) -> None:
-        self.config = GoogleOIDCConfig(
-            "client-id", "client-secret", "http://127.0.0.1/callback", frozenset()
-        )
+        self.config = GoogleOIDCConfig("client-id", frozenset())
         self.identity = identity
 
-    def authorization_url(self, state: str, nonce: str, code_challenge: str) -> str:
-        return f"https://accounts.example/auth?state={state}&nonce={nonce}"
-
-    def exchange_and_verify(self, code: str, code_verifier: str, nonce: str) -> GoogleIdentity:
-        assert (code, bool(code_verifier), bool(nonce)) == ("valid-code", True, True)
+    def verify(self, credential: str, nonce: str) -> GoogleIdentity:
+        assert (credential, bool(nonce)) == ("valid-token", True)
         return self.identity
 
 
-class NoRedirect(HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None
-
-
 def login_with_google(opener, base_url: str) -> dict:
-    with pytest.raises(HTTPError) as redirect:
-        opener.open(f"{base_url}/api/auth/google/start?next=/admin")
-    state = parse_qs(urlparse(redirect.value.headers["Location"]).query)["state"][0]
-    with pytest.raises(HTTPError) as callback:
-        opener.open(f"{base_url}/api/auth/google/callback?code=valid-code&state={state}")
-    assert callback.value.code == 303
+    with opener.open(f"{base_url}/api/auth/google/start?next=/admin") as response:
+        config = json.load(response)
+    login = Request(
+        f"{base_url}/api/auth/google",
+        data=json.dumps(
+            {"credential": "valid-token", "loginCsrf": config["loginCsrf"]}
+        ).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with opener.open(login) as response:
+        result = json.load(response)
+    assert result["nextPath"] == "/admin"
     with opener.open(f"{base_url}/api/auth/session") as response:
         return json.load(response)
 
@@ -106,7 +102,7 @@ def test_google_login_enforces_admin_role(tmp_path, email, admin_emails, expecte
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     base_url = f"http://127.0.0.1:{server.server_port}"
-    opener = build_opener(HTTPCookieProcessor(CookieJar()), NoRedirect())
+    opener = build_opener(HTTPCookieProcessor(CookieJar()))
     try:
         with pytest.raises(HTTPError) as unauthorized:
             urlopen(f"{base_url}/api/admin/series")
@@ -147,6 +143,37 @@ def test_session_reports_google_configuration(tmp_path) -> None:
         server.server_close()
         thread.join()
     assert payload == {"authenticated": False, "googleConfigured": False}
+
+
+def test_google_login_rejects_mismatched_csrf(tmp_path) -> None:
+    server = create_web_server(
+        tmp_path / "catalog.db",
+        port=0,
+        web_root=tmp_path,
+        oidc_client=FakeGoogleClient(GoogleIdentity("sub-cris", "cris@example.com")),
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base_url = f"http://127.0.0.1:{server.server_port}"
+    opener = build_opener(HTTPCookieProcessor(CookieJar()))
+    try:
+        with opener.open(f"{base_url}/api/auth/google/start"):
+            pass
+        request = Request(
+            f"{base_url}/api/auth/google",
+            data=json.dumps(
+                {"credential": "valid-token", "loginCsrf": "attacker-state"}
+            ).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with pytest.raises(HTTPError) as rejected:
+            opener.open(request)
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+    assert rejected.value.code == 400
 
 
 def test_admin_payload_contains_editable_fields(connection) -> None:

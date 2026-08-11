@@ -16,6 +16,39 @@ async function api(url, options = {}) {
   return payload;
 }
 
+function loadGoogleLibrary() {
+  if (window.google?.accounts?.id) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error("No se pudo cargar Google Identity Services"));
+    document.head.append(script);
+  });
+}
+
+async function setupGoogleLogin() {
+  const config = await api("/api/auth/google/start?next=/admin");
+  await loadGoogleLibrary();
+  window.google.accounts.id.initialize({
+    client_id: config.clientId,
+    nonce: config.nonce,
+    callback: async ({ credential }) => {
+      const result = await api("/api/auth/google", {
+        method: "POST",
+        body: JSON.stringify({ credential, loginCsrf: config.loginCsrf }),
+      });
+      window.location.assign(result.nextPath);
+    },
+  });
+  window.google.accounts.id.renderButton(document.querySelector("#google-login"), {
+    theme: "outline",
+    size: "large",
+    text: "continue_with",
+  });
+}
+
 async function restoreSession() {
   try {
     const session = await api("/api/auth/session");
@@ -25,6 +58,7 @@ async function restoreSession() {
         document.querySelector("#google-login").hidden = true;
         document.querySelector("#login-message").textContent = "Configura las credenciales de Google para habilitar el acceso.";
       }
+      else await setupGoogleLogin();
       return;
     }
     if (session.user.role !== "admin") {

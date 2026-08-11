@@ -14,7 +14,7 @@ h1,h2 { margin:0 0 9px; letter-spacing:-.035em; }
 label { display:grid; gap:6px; color:var(--muted); font-size:11px; font-weight:700; }
 input,select,textarea { width:100%; padding:11px; color:var(--ink); background:white; border:1px solid var(--line); border-radius:9px; }
 textarea { resize:vertical; }
-.google-button { margin-top:24px; padding:12px 16px; display:block; color:white; background:var(--plum); border-radius:9px; text-align:center; text-decoration:none; font-weight:700; }
+.google-button { min-height:44px; margin-top:24px; display:grid; place-items:center; }
 #viewer-logout { width:100%; margin-top:12px; }
 .form-message { min-height:18px; margin:0; color:#a33d61; font-size:11px; }
 .backoffice > header { min-height:66px; padding:0 24px; display:flex; align-items:center; justify-content:space-between; background:white; border-bottom:1px solid var(--line); }

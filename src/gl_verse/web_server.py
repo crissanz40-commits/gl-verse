@@ -58,8 +58,6 @@ class CatalogRequestHandler(SimpleHTTPRequestHandler):
             self._send_session()
         elif path == "/api/auth/google/start":
             self._start_google(parse_qs(parsed.query))
-        elif path == "/api/auth/google/callback":
-            self._finish_google(parse_qs(parsed.query))
         elif path == "/api/admin/series":
             if self._require_admin():
                 self._send_admin_series()
@@ -70,6 +68,9 @@ class CatalogRequestHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path
+        if path == "/api/auth/google":
+            self._finish_google()
+            return
         if path == "/api/auth/logout":
             session = self._require_session(require_csrf=True)
             if session:
@@ -112,28 +113,41 @@ class CatalogRequestHandler(SimpleHTTPRequestHandler):
             return
         requested_next = query.get("next", ["/"])[0]
         next_path = "/admin" if requested_next.startswith("/admin") else "/"
-        state, flow, challenge = self.flow_store.create(next_path)
-        self._redirect(
-            self.oidc_client.authorization_url(state, flow.nonce, challenge),
-            headers={"Set-Cookie": self._cookie("glv_oauth_state", state, 600)},
+        state, flow = self.flow_store.create(next_path)
+        self._send_json(
+            {
+                "clientId": self.oidc_client.config.client_id,
+                "nonce": flow.nonce,
+                "loginCsrf": state,
+            },
+            headers={"Set-Cookie": self._cookie("glv_login_csrf", state, 600)},
         )
 
-    def _finish_google(self, query: dict[str, list[str]]) -> None:
+    def _finish_google(self) -> None:
         if self.oidc_client is None:
             self._send_json({"error": "Google no está configurado"}, HTTPStatus.SERVICE_UNAVAILABLE)
             return
-        state = query.get("state", [""])[0]
-        cookie_state = self._cookie_value("glv_oauth_state")
+        try:
+            payload = self._read_json()
+            if not isinstance(payload, dict) or set(payload) != {"credential", "loginCsrf"}:
+                raise ValueError
+            credential = payload["credential"]
+            state = payload["loginCsrf"]
+            if not isinstance(credential, str) or not isinstance(state, str):
+                raise TypeError
+        except (ValueError, TypeError, json.JSONDecodeError):
+            self._send_json({"error": "Respuesta de Google no válida"}, HTTPStatus.BAD_REQUEST)
+            return
+        cookie_state = self._cookie_value("glv_login_csrf")
         if not state or not cookie_state or not secrets.compare_digest(state, cookie_state):
-            self._send_json({"error": "Estado OAuth no válido"}, HTTPStatus.BAD_REQUEST)
+            self._send_json({"error": "Protección CSRF de Google no válida"}, HTTPStatus.BAD_REQUEST)
             return
         flow = self.flow_store.consume(state)
-        code = query.get("code", [""])[0]
-        if flow is None or not code or query.get("error"):
+        if flow is None:
             self._send_json({"error": "Inicio de sesión cancelado o caducado"}, HTTPStatus.BAD_REQUEST)
             return
         try:
-            identity = self.oidc_client.exchange_and_verify(code, flow.code_verifier, flow.nonce)
+            identity = self.oidc_client.verify(credential, flow.nonce)
             with closing(connect_database(self.database_path)) as connection:
                 user = upsert_google_user(connection, identity, self.admin_emails)
         except GoogleAuthError as error:
@@ -143,8 +157,8 @@ class CatalogRequestHandler(SimpleHTTPRequestHandler):
             self._send_json({"error": "No se pudo registrar la cuenta"}, HTTPStatus.INTERNAL_SERVER_ERROR)
             return
         token, _ = self.session_store.create(user)
-        self._redirect(
-            flow.next_path,
+        self._send_json(
+            {"status": "ok", "nextPath": flow.next_path},
             headers={
                 "Set-Cookie": self._cookie("glv_session", token, 28800),
                 "Clear-Site-Data": '"cache"',
@@ -265,7 +279,7 @@ class CatalogRequestHandler(SimpleHTTPRequestHandler):
         return session
 
     def _cookie(self, name: str, value: str, max_age: int) -> str:
-        secure = "; Secure" if self.oidc_client and self.oidc_client.config.redirect_uri.startswith("https://") else ""
+        secure = "; Secure" if self.headers.get("X-Forwarded-Proto") == "https" else ""
         return f"{name}={value}; Path=/; HttpOnly; SameSite=Lax; Max-Age={max_age}{secure}"
 
     def _expired_cookie(self, name: str) -> str:
@@ -291,12 +305,14 @@ class CatalogRequestHandler(SimpleHTTPRequestHandler):
 
     def end_headers(self) -> None:
         self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("Referrer-Policy", "same-origin")
+        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
         self.send_header("X-Frame-Options", "DENY")
         self.send_header(
             "Content-Security-Policy",
-            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-            "font-src https://fonts.gstatic.com; img-src 'self' https: data:; connect-src 'self'; "
+            "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style; "
+            "font-src https://fonts.gstatic.com; img-src 'self' https: data:; "
+            "connect-src 'self' https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; "
             "frame-ancestors 'none'; base-uri 'self'",
         )
         super().end_headers()

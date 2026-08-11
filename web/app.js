@@ -23,15 +23,19 @@ async function loadIdentity() {
   try {
     const response = await fetch("/api/auth/session");
     const session = await response.json();
-    const login = document.querySelector("#login-link");
+    const login = document.querySelector("#google-login");
     if (!session.googleConfigured) {
       login.hidden = true;
       return;
     }
-    if (!session.authenticated) return;
-    login.textContent = `Salir · ${session.user.name || session.user.email}`;
-    login.href = "#logout";
-    login.addEventListener("click", async (event) => {
+    if (!session.authenticated) {
+      await setupGoogleLogin(login);
+      return;
+    }
+    const logout = document.createElement("a");
+    logout.href = "#logout";
+    logout.textContent = `Salir · ${session.user.name || session.user.email}`;
+    logout.addEventListener("click", async (event) => {
       event.preventDefault();
       await fetch("/api/auth/logout", {
         method: "POST",
@@ -40,10 +44,45 @@ async function loadIdentity() {
       });
       window.location.reload();
     });
+    login.replaceChildren(logout);
     document.querySelector("#admin-link").hidden = session.user.role !== "admin";
   } catch {
     // El catálogo público sigue disponible aunque falle la sesión.
   }
+}
+
+function loadGoogleLibrary() {
+  if (window.google?.accounts?.id) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error("No se pudo cargar Google Identity Services"));
+    document.head.append(script);
+  });
+}
+
+async function setupGoogleLogin(container) {
+  const response = await fetch("/api/auth/google/start?next=/");
+  if (!response.ok) throw new Error("Google no está configurado");
+  const config = await response.json();
+  await loadGoogleLibrary();
+  window.google.accounts.id.initialize({
+    client_id: config.clientId,
+    nonce: config.nonce,
+    callback: async ({ credential }) => {
+      const loginResponse = await fetch("/api/auth/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential, loginCsrf: config.loginCsrf }),
+      });
+      if (!loginResponse.ok) throw new Error("No se pudo iniciar sesión con Google");
+      const result = await loginResponse.json();
+      window.location.assign(result.nextPath);
+    },
+  });
+  window.google.accounts.id.renderButton(container, { theme: "outline", size: "medium" });
 }
 
 const byId = (items, id) => items.find((item) => item.id === id);

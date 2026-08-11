@@ -35,12 +35,10 @@ gl-verse web --database data/gl_verse.db --host 127.0.0.1 --port 8080
 
 GL Verse usa Google OpenID Connect. La identidad se guarda mediante el identificador estable `sub` de Google y cada cuenta tiene rol `admin` o `viewer`. Los correos incluidos en `GL_VERSE_ADMIN_EMAILS` se promocionan a admin en su primer acceso; cualquier otra cuenta entra como viewer. Un admin ya persistido no se degrada si cambia esa variable.
 
-En Google Cloud crea un cliente OAuth 2.0 de tipo aplicación web y registra exactamente `http://127.0.0.1:8000/api/auth/google/callback` como URI de redirección autorizada. Antes de iniciar la aplicación, configura en PowerShell:
+En Google Cloud crea un cliente OAuth 2.0 de tipo aplicación web y registra `http://127.0.0.1:8000` como origen JavaScript autorizado. GL Verse usa Google Identity Services para recibir y validar un ID token, por lo que no necesita ni almacena Client Secret, access tokens o refresh tokens. Antes de iniciar la aplicación, configura en PowerShell:
 
 ```powershell
 $env:GL_VERSE_GOOGLE_CLIENT_ID="tu-client-id.apps.googleusercontent.com"
-$env:GL_VERSE_GOOGLE_CLIENT_SECRET="tu-client-secret"
-$env:GL_VERSE_GOOGLE_REDIRECT_URI="http://127.0.0.1:8000/api/auth/google/callback"
 $env:GL_VERSE_ADMIN_EMAILS="tu-correo@gmail.com"
 gl-verse web
 ```
