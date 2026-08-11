@@ -73,17 +73,18 @@
       <section class="catalog" id="popular">
         <aside class="filters" aria-label="Filtros del catálogo">
           <div class="filter-title"><div><span>FILTROS GL</span><h2>A tu medida</h2></div><button id="reset-filters" type="button">Limpiar</button></div>
-          <fieldset hidden>
+          <fieldset id="drama-fieldset" hidden>
             <legend>Nivel de drama</legend>
-            <label class="range-label"><span>Suavecito</span><span>Necesito terapia</span></label>
-            <input id="drama-filter" type="range" min="1" max="5" value="5" />
-            <div class="range-value">Hasta <strong id="drama-value">5</strong>/5</div>
+            <label class="range-label"><span>Sin drama</span><span>Alto</span></label>
+            <input id="drama-filter" type="range" min="0" max="3" value="3" />
+            <div class="range-value">Hasta <strong id="drama-value">3</strong>/3</div>
           </fieldset>
-          <fieldset hidden>
+          <fieldset id="ending-fieldset" hidden>
             <legend>Tipo de final</legend>
             <label class="check-row"><input type="checkbox" name="ending" value="happy" /><span class="fake-check"></span><span>Final feliz</span><b>☺</b></label>
+            <label class="check-row"><input type="checkbox" name="ending" value="bittersweet" /><span class="fake-check"></span><span>Final agridulce</span><b>◐</b></label>
             <label class="check-row"><input type="checkbox" name="ending" value="open" /><span class="fake-check"></span><span>Final abierto</span><b>◌</b></label>
-            <label class="check-row"><input type="checkbox" name="ending" value="sad" /><span class="fake-check"></span><span>Final triste</span><b>☂</b></label>
+            <label class="check-row"><input type="checkbox" name="ending" value="sad" /><span class="fake-check"></span><span>Final triste o trágico</span><b>☂</b></label>
           </fieldset>
           <fieldset>
             <legend>Pareja</legend>
@@ -101,7 +102,11 @@
               <select id="release-year-filter" aria-label="Filtrar por año de estreno"><option value="">Todos los años</option></select>
             </div>
           </fieldset>
-          <div class="comfort-box" hidden><span>♡</span><div><strong>Modo confort</strong><p>Final feliz y drama máximo 2.</p></div><button id="comfort-toggle" class="toggle" type="button" role="switch" aria-checked="false"><i></i></button></div>
+          <fieldset id="tag-fieldset" hidden>
+            <legend>Etiqueta</legend>
+            <select id="tag-filter"><option value="">Todas las etiquetas</option></select>
+          </fieldset>
+          <div class="comfort-box" id="comfort-box" hidden><span>♡</span><div><strong>Modo confort</strong><p>Sin drama y con final feliz.</p></div><button id="comfort-toggle" class="toggle" type="button" role="switch" aria-checked="false"><i></i></button></div>
         </aside>
 
         <div class="catalog-content">
