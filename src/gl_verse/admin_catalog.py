@@ -87,7 +87,7 @@ def admin_series_payload(connection: sqlite3.Connection) -> list[dict[str, Any]]
 
 def update_series(
     connection: sqlite3.Connection,
-    username: str,
+    actor_sub: str,
     series_id: str,
     fields: Any,
     source_data: Any,
@@ -189,13 +189,13 @@ def update_series(
             """,
             (series_id,),
         )
-        _audit(connection, username, series_id, changed_at, changes, source.id)
+        _audit(connection, actor_sub, series_id, changed_at, changes, source.id)
     return next(item for item in admin_series_payload(connection) if item["id"] == series_id)
 
 
 def set_review(
     connection: sqlite3.Connection,
-    username: str,
+    actor_sub: str,
     series_id: str,
     status: ReviewStatus,
 ) -> dict[str, Any]:
@@ -217,7 +217,7 @@ def set_review(
         )
         _audit(
             connection,
-            username,
+            actor_sub,
             series_id,
             _timestamp(),
             {"reviewStatus": status.value},
@@ -273,7 +273,7 @@ def _validate_fields(series_id: str, values: dict[str, Any], changes: dict[str, 
 
 def _audit(
     connection: sqlite3.Connection,
-    username: str,
+    actor_sub: str,
     series_id: str,
     changed_at: str,
     changes: dict[str, Any],
@@ -282,8 +282,8 @@ def _audit(
     connection.execute(
         """
         INSERT INTO admin_audit_log (
-            username, series_id, changed_at, changes_json, source_id
+            actor_sub, series_id, changed_at, changes_json, source_id
         ) VALUES (?, ?, ?, ?, ?)
         """,
-        (username, series_id, changed_at, json.dumps(changes, ensure_ascii=False), source_id),
+        (actor_sub, series_id, changed_at, json.dumps(changes, ensure_ascii=False), source_id),
     )

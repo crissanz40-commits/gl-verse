@@ -1,5 +1,5 @@
 let csrfToken = "";
-let username = "";
+let currentUser = null;
 let series = [];
 let selected = null;
 
@@ -18,16 +18,34 @@ async function api(url, options = {}) {
 
 async function restoreSession() {
   try {
-    const session = await api("/api/admin/session");
+    const session = await api("/api/auth/session");
+    if (!session.authenticated) {
+      loginPanel.hidden = false; backoffice.hidden = true;
+      if (!session.googleConfigured) {
+        document.querySelector("#google-login").hidden = true;
+        document.querySelector("#login-message").textContent = "Configura las credenciales de Google para habilitar el acceso.";
+      }
+      return;
+    }
+    if (session.user.role !== "admin") {
+      loginPanel.hidden = false; backoffice.hidden = true;
+      document.querySelector("#google-login").hidden = true;
+      document.querySelector("#viewer-logout").hidden = false;
+      document.querySelector("#login-message").textContent = `${session.user.email} tiene rol viewer y no puede acceder al backoffice.`;
+      csrfToken = session.csrfToken;
+      return;
+    }
     activateSession(session);
     await loadSeries();
   } catch { loginPanel.hidden = false; backoffice.hidden = true; }
 }
 
 function activateSession(session) {
-  username = session.username;
+  currentUser = session.user;
   csrfToken = session.csrfToken;
-  document.querySelector("#session-user").textContent = username;
+  document.querySelector("#session-user").textContent = currentUser.name || currentUser.email;
+  const avatar = document.querySelector("#session-avatar");
+  if (currentUser.pictureUrl) { avatar.src = currentUser.pictureUrl; avatar.hidden = false; }
   loginPanel.hidden = true;
   backoffice.hidden = false;
 }
@@ -75,17 +93,6 @@ function updateReviewUI() {
   button.dataset.status = approved ? "pending" : "approved";
 }
 
-document.querySelector("#login-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const button = event.submitter; button.disabled = true;
-  const message = document.querySelector("#login-message"); message.textContent = "";
-  try {
-    const data = new FormData(event.currentTarget);
-    const session = await api("/api/admin/login", { method: "POST", body: JSON.stringify({ username: data.get("username"), password: data.get("password") }) });
-    activateSession(session); event.currentTarget.reset(); await loadSeries();
-  } catch (error) { message.textContent = error.message; } finally { button.disabled = false; }
-});
-
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const button = event.submitter; button.disabled = true;
@@ -116,7 +123,10 @@ document.querySelector("#review-button").addEventListener("click", async (event)
 });
 
 document.querySelector("#logout-button").addEventListener("click", async () => {
-  try { await api("/api/admin/logout", { method: "POST", body: "{}" }); } finally { csrfToken = ""; username = ""; series = []; selected = null; backoffice.hidden = true; loginPanel.hidden = false; }
+  try { await api("/api/auth/logout", { method: "POST", body: "{}" }); } finally { csrfToken = ""; currentUser = null; series = []; selected = null; window.location.assign("/"); }
+});
+document.querySelector("#viewer-logout").addEventListener("click", async () => {
+  try { await api("/api/auth/logout", { method: "POST", body: "{}" }); } finally { window.location.assign("/"); }
 });
 document.querySelector("#admin-search").addEventListener("input", renderSeries);
 restoreSession();

@@ -19,6 +19,33 @@ const activeFilters = document.querySelector("#active-filters");
 const emptyState = document.querySelector("#empty-state");
 const dialog = document.querySelector("#detail-dialog");
 
+async function loadIdentity() {
+  try {
+    const response = await fetch("/api/auth/session");
+    const session = await response.json();
+    const login = document.querySelector("#login-link");
+    if (!session.googleConfigured) {
+      login.hidden = true;
+      return;
+    }
+    if (!session.authenticated) return;
+    login.textContent = `Salir · ${session.user.name || session.user.email}`;
+    login.href = "#logout";
+    login.addEventListener("click", async (event) => {
+      event.preventDefault();
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-GL-Verse-CSRF": session.csrfToken },
+        body: "{}",
+      });
+      window.location.reload();
+    });
+    document.querySelector("#admin-link").hidden = session.user.role !== "admin";
+  } catch {
+    // El catálogo público sigue disponible aunque falle la sesión.
+  }
+}
+
 const byId = (items, id) => items.find((item) => item.id === id);
 const pairingsForSeries = (seriesId) => seriesPairings.filter((pairing) => pairing.seriesId === seriesId);
 const pairHistory = (pairId) => seriesPairings.filter((pairing) => pairing.pairId === pairId);
@@ -337,4 +364,5 @@ async function loadCatalog() {
   }
 }
 
+loadIdentity();
 loadCatalog();

@@ -17,6 +17,7 @@ _MIGRATIONS = {
     10: "010_extended_catalog.sql",
     11: "011_series_review_status.sql",
     12: "012_admin_backoffice.sql",
+    13: "013_google_identity_roles.sql",
 }
 SCHEMA_VERSION = max(_MIGRATIONS)
 

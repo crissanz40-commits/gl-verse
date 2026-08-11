@@ -31,15 +31,21 @@ gl-verse web --database data/gl_verse.db --host 127.0.0.1 --port 8080
 
 `GET /api/health` permite comprobar que el proceso está activo. Las valoraciones personales y las guías de visionado siguen separadas del catálogo objetivo; sus filtros se activarán cuando esas capas estén persistidas.
 
-### Backoffice local
+### Acceso con Google y backoffice
 
-El acceso administrativo se limita a conexiones desde `127.0.0.1`. Crea el primer usuario mediante un prompt que no muestra ni guarda la contraseña en claro:
+GL Verse usa Google OpenID Connect. La identidad se guarda mediante el identificador estable `sub` de Google y cada cuenta tiene rol `admin` o `viewer`. Los correos incluidos en `GL_VERSE_ADMIN_EMAILS` se promocionan a admin en su primer acceso; cualquier otra cuenta entra como viewer. Un admin ya persistido no se degrada si cambia esa variable.
 
-```bash
-gl-verse crear-admin cris
+En Google Cloud crea un cliente OAuth 2.0 de tipo aplicación web y registra exactamente `http://127.0.0.1:8000/api/auth/google/callback` como URI de redirección autorizada. Antes de iniciar la aplicación, configura en PowerShell:
+
+```powershell
+$env:GL_VERSE_GOOGLE_CLIENT_ID="tu-client-id.apps.googleusercontent.com"
+$env:GL_VERSE_GOOGLE_CLIENT_SECRET="tu-client-secret"
+$env:GL_VERSE_GOOGLE_REDIRECT_URI="http://127.0.0.1:8000/api/auth/google/callback"
+$env:GL_VERSE_ADMIN_EMAILS="tu-correo@gmail.com"
+gl-verse web
 ```
 
-Después inicia la web y abre `http://127.0.0.1:8000/admin.html`. Las contraseñas se guardan con PBKDF2-HMAC-SHA256 y sal aleatoria; las sesiones duran ocho horas o hasta reiniciar el servidor. Cualquier edición objetiva exige una fuente, queda en el historial administrativo y devuelve la ficha a pendiente antes de poder aprobarla otra vez.
+Abre `http://127.0.0.1:8000` y pulsa «Entrar con Google». Solo un admin verá y podrá usar `http://127.0.0.1:8000/admin.html`; los viewers conservan acceso de lectura al catálogo. GL Verse no almacena contraseñas ni tokens de Google: crea una sesión local de ocho horas. Toda edición objetiva exige una fuente, queda ligada al `sub` del admin en el historial y devuelve la ficha a pendiente antes de poder aprobarla otra vez.
 
 ## Migraciones SQLite
 
@@ -56,7 +62,8 @@ La persistencia utiliza migraciones SQL numeradas:
 - `009_character_pairings.sql`: desacopla las parejas ficticias de las parejas artísticas.
 - `010_extended_catalog.sql`: persiste empresas, colecciones, episodios, etiquetas, advertencias y guías de visionado.
 - `011_series_review_status.sql`: guarda la aprobación editorial manual de cada ficha sin mezclarla con el estado de emisión.
-- `012_admin_backoffice.sql`: persiste administradores locales y el historial de cambios editoriales.
+- `012_admin_backoffice.sql`: introduce la base del backoffice y su historial editorial.
+- `013_google_identity_roles.sql`: sustituye las credenciales locales por identidades Google con roles `admin` y `viewer`.
 
 Una base nueva ejecuta todas las migraciones en orden. Una base existente aplica únicamente las versiones pendientes.
 

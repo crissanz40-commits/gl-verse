@@ -13,19 +13,16 @@
         <span class="logo">GL</span>
         <p class="kicker">BACKOFFICE</p>
         <h1>Acceso editorial</h1>
-        <p>Inicia sesión con el administrador local de esta base de datos.</p>
-        <form id="login-form">
-          <label>Usuario <input name="username" autocomplete="username" required /></label>
-          <label>Contraseña <input name="password" type="password" autocomplete="current-password" required /></label>
-          <button type="submit">Entrar</button>
-          <p class="form-message" id="login-message" role="status"></p>
-        </form>
+        <p id="login-description">Inicia sesión con tu cuenta de Google. Solo el rol admin puede editar y aprobar fichas.</p>
+        <a class="google-button" id="google-login" href="/api/auth/google/start?next=/admin">Continuar con Google</a>
+        <button class="secondary" id="viewer-logout" type="button" hidden>Cerrar sesión</button>
+        <p class="form-message" id="login-message" role="status"></p>
       </section>
 
       <section class="backoffice" id="backoffice" hidden>
         <header>
           <div><span class="logo">GL</span><strong>Backoffice</strong></div>
-          <div><span id="session-user"></span><button id="logout-button" class="secondary" type="button">Cerrar sesión</button></div>
+          <div><img id="session-avatar" alt="" hidden /><span id="session-user"></span><button id="logout-button" class="secondary" type="button">Cerrar sesión</button></div>
         </header>
         <div class="workspace">
           <aside>

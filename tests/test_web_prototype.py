@@ -16,10 +16,10 @@ def test_admin_prototype_uses_authenticated_api() -> None:
     html = (WEB_ROOT / "admin.html").read_text(encoding="utf-8")
     javascript = (WEB_ROOT / "admin.js").read_text(encoding="utf-8")
 
-    assert 'id="login-form"' in html
+    assert 'id="google-login"' in html
     assert 'id="series-form"' in html
-    assert "/api/admin/login" in javascript
-    assert "/api/admin/session" in javascript
+    assert "/api/auth/google/start" in html
+    assert "/api/auth/session" in javascript
     assert "X-GL-Verse-CSRF" in javascript
     assert "/review-status" in javascript
 
