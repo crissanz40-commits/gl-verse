@@ -69,10 +69,22 @@ class CatalogConflictError(CatalogImportError):
 
 
 @dataclass(frozen=True, slots=True)
+class SeriesImageReplacement:
+    """Sustituye una portada conocida mediante comparación y actualización atómicas."""
+
+    series_id: str
+    expected_url: str
+    expected_source_url: str
+    replacement_url: str
+    replacement_source_url: str
+
+
+@dataclass(frozen=True, slots=True)
 class CatalogDocument:
     """Datos validados que pueden incorporarse al catálogo."""
 
     series: tuple[Series, ...] = ()
+    series_image_replacements: tuple[SeriesImageReplacement, ...] = ()
     people: tuple[Person, ...] = ()
     characters: tuple[Character, ...] = ()
     credits: tuple[Credit, ...] = ()
@@ -140,6 +152,7 @@ def parse_catalog(raw: Any) -> CatalogDocument:
         required={"format_version"},
         optional={
             "series",
+            "series_image_replacements",
             "people",
             "characters",
             "credits",
@@ -175,6 +188,10 @@ def parse_catalog(raw: Any) -> CatalogDocument:
     try:
         document = CatalogDocument(
             series=tuple(_parse_series(item, index) for index, item in _items(root, "series")),
+            series_image_replacements=tuple(
+                _parse_series_image_replacement(item, index)
+                for index, item in _items(root, "series_image_replacements")
+            ),
             people=tuple(_parse_person(item, index) for index, item in _items(root, "people")),
             characters=tuple(
                 _parse_character(item, index) for index, item in _items(root, "characters")
@@ -272,6 +289,9 @@ def import_catalog(
         )
         _import_platforms(connection, document.platforms, inserted, updated, unchanged)
         _import_series(connection, document.series, inserted, updated, unchanged)
+        _import_series_image_replacements(
+            connection, document.series_image_replacements, updated, unchanged
+        )
         _import_people(connection, document.people, inserted, updated, unchanged)
         _import_characters(connection, document.characters, inserted, unchanged)
         _import_credits(connection, document.credits, inserted, unchanged)
@@ -312,6 +332,7 @@ def import_catalog(
 
 _SECTION_NAMES = (
     "series",
+    "series_image_replacements",
     "people",
     "characters",
     "credits",
@@ -424,6 +445,48 @@ def _parse_series(value: Any, index: int) -> Series:
         synopsis=item.get("synopsis"),
         cover_image_url=item.get("cover_image_url"),
         cover_image_source_url=item.get("cover_image_source_url"),
+    )
+
+
+def _parse_series_image_replacement(value: Any, index: int) -> SeriesImageReplacement:
+    item = _object(
+        value,
+        "series_image_replacements",
+        index,
+        {"series_id", "expected", "replacement"},
+        set(),
+    )
+    expected = _mapping(item["expected"], f"series_image_replacements[{index}].expected")
+    replacement = _mapping(
+        item["replacement"], f"series_image_replacements[{index}].replacement"
+    )
+    if not isinstance(item["series_id"], str) or not item["series_id"].strip():
+        raise CatalogImportError(
+            f"series_image_replacements[{index}].series_id no puede estar vacío"
+        )
+    for media, context in (
+        (expected, f"series_image_replacements[{index}].expected"),
+        (replacement, f"series_image_replacements[{index}].replacement"),
+    ):
+        _fields(media, required={"url", "source_url"}, optional=set(), context=context)
+        for field in ("url", "source_url"):
+            if not isinstance(media[field], str) or not media[field].startswith(
+                ("https://", "http://")
+            ):
+                raise CatalogImportError(f"{context}.{field} debe ser una URL HTTP")
+    if (expected["url"], expected["source_url"]) == (
+        replacement["url"],
+        replacement["source_url"],
+    ):
+        raise CatalogImportError(
+            f"series_image_replacements[{index}] debe cambiar la portada o su fuente"
+        )
+    return SeriesImageReplacement(
+        series_id=item["series_id"],
+        expected_url=expected["url"],
+        expected_source_url=expected["source_url"],
+        replacement_url=replacement["url"],
+        replacement_source_url=replacement["source_url"],
     )
 
 
@@ -717,6 +780,10 @@ def _reject_document_duplicates(document: CatalogDocument) -> None:
         _unique((entity.id for entity in entities), f"identificador repetido en {section}")
 
     _unique(
+        (item.series_id for item in document.series_image_replacements),
+        "reemplazo de portada repetido",
+    )
+    _unique(
         ((item.series_id, *sorted(item.character_ids)) for item in document.series_pairings),
         "pareja ficticia repetida",
     )
@@ -957,6 +1024,10 @@ def _validate_references(connection: sqlite3.Connection, document: CatalogDocume
         ),
     }
 
+    for item in document.series_image_replacements:
+        _require_reference(
+            item.series_id, available["series"], "reemplazo de portada", "serie"
+        )
     for item in document.characters:
         _require_reference(item.series_id, available["series"], f"personaje {item.id}", "serie")
     for item in document.credits:
@@ -1193,6 +1264,54 @@ def _import_series(connection, entities, inserted, updated, unchanged) -> None:
                 "cover_image_source_url",
             ),
         )
+
+
+def _import_series_image_replacements(connection, entities, updated, unchanged) -> None:
+    for item in entities:
+        row = connection.execute(
+            """
+            SELECT cover_image_url, cover_image_source_url
+            FROM series
+            WHERE id = ?
+            """,
+            (item.series_id,),
+        ).fetchone()
+        if row is None:
+            raise CatalogImportError(
+                f"Referencia desconocida en reemplazo de portada: serie {item.series_id!r}"
+            )
+
+        current = (row["cover_image_url"], row["cover_image_source_url"])
+        expected = (item.expected_url, item.expected_source_url)
+        replacement = (item.replacement_url, item.replacement_source_url)
+        if current == replacement:
+            unchanged["series_image_replacements"] += 1
+            continue
+        if current != expected:
+            raise CatalogConflictError(
+                f"Conflicto en reemplazo de portada de series (id={item.series_id!r})"
+            )
+
+        cursor = connection.execute(
+            """
+            UPDATE series
+            SET cover_image_url = ?, cover_image_source_url = ?
+            WHERE id = ? AND cover_image_url = ? AND cover_image_source_url = ?
+            """,
+            (
+                item.replacement_url,
+                item.replacement_source_url,
+                item.series_id,
+                item.expected_url,
+                item.expected_source_url,
+            ),
+        )
+        if cursor.rowcount != 1:
+            raise CatalogConflictError(
+                f"Conflicto concurrente en reemplazo de portada de series "
+                f"(id={item.series_id!r})"
+            )
+        updated["series_image_replacements"] += 1
 
 
 def _import_platforms(connection, entities, inserted, updated, unchanged) -> None:
