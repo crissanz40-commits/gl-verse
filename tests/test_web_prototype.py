@@ -23,6 +23,9 @@ def test_admin_prototype_uses_authenticated_api() -> None:
     assert "/api/auth/google/start" in javascript
     assert "accounts.google.com/gsi/client" in javascript
     assert "/api/auth/session" in javascript
+    assert 'credentials: "same-origin"' in javascript
+    assert "window.sessionStorage" in javascript
+    assert "Authorization" in javascript
     assert "X-GL-Verse-CSRF" in javascript
     assert "/review-status" in javascript
 

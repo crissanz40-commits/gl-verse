@@ -128,10 +128,7 @@ class CatalogRequestHandler(SimpleHTTPRequestHandler):
             self._send_json({"error": "Google no está configurado"}, HTTPStatus.SERVICE_UNAVAILABLE)
             return
         try:
-            form_navigation = self.headers.get("Content-Type", "").startswith(
-                "application/x-www-form-urlencoded"
-            )
-            payload = self._read_form() if form_navigation else self._read_json()
+            payload = self._read_json()
             if not isinstance(payload, dict) or set(payload) != {"credential", "loginCsrf"}:
                 raise ValueError
             credential = payload["credential"]
@@ -161,14 +158,11 @@ class CatalogRequestHandler(SimpleHTTPRequestHandler):
             return
         token, _ = self.session_store.create(user)
         headers = {"Set-Cookie": self._cookie("glv_session", token, 28800)}
-        if form_navigation:
-            destination = "/admin.html" if user.role == "admin" else "/"
-            self._send_auth_complete(destination, headers=headers)
-        else:
-            self._send_json(
-                {"status": "ok", "nextPath": flow.next_path},
-                headers=headers,
-            )
+        destination = "/admin.html" if user.role == "admin" else "/"
+        self._send_json(
+            {"status": "ok", "nextPath": destination, "sessionToken": token},
+            headers=headers,
+        )
 
     def _send_session(self) -> None:
         session_token = self._session_token()
@@ -256,14 +250,11 @@ class CatalogRequestHandler(SimpleHTTPRequestHandler):
             raise ValueError("Cuerpo JSON no válido")
         return json.loads(self.rfile.read(content_length))
 
-    def _read_form(self) -> dict[str, str]:
-        content_length = int(self.headers.get("Content-Length", "0"))
-        if content_length < 1 or content_length > 65536:
-            raise ValueError("Formulario no válido")
-        values = parse_qs(self.rfile.read(content_length).decode("utf-8"), strict_parsing=True)
-        return {key: items[0] for key, items in values.items() if len(items) == 1}
-
     def _session_token(self) -> str | None:
+        authorization = self.headers.get("Authorization", "")
+        scheme, _, token = authorization.partition(" ")
+        if scheme.casefold() == "bearer" and token:
+            return token
         return self._cookie_value("glv_session")
 
     def _cookie_value(self, name: str) -> str | None:
@@ -304,33 +295,6 @@ class CatalogRequestHandler(SimpleHTTPRequestHandler):
         for name, value in (headers or {}).items():
             self.send_header(name, value)
         self.end_headers()
-
-    def _send_auth_complete(self, destination: str, *, headers: dict[str, str]) -> None:
-        body = (
-            "<!doctype html><html lang=\"es\"><head><meta charset=\"utf-8\">"
-            f"<meta http-equiv=\"refresh\" content=\"1; url={destination}\">"
-            "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
-            "<title>Entrando · GL Verse</title>"
-            "<style>body{margin:0;min-height:100vh;display:grid;place-items:center;"
-            "color:#281828;background:#f2edf3;font:16px system-ui,sans-serif}"
-            "main{width:min(390px,calc(100% - 32px));padding:38px;text-align:center;"
-            "background:white;border-radius:22px;box-shadow:0 25px 70px #31192e26}"
-            ".logo{width:48px;height:48px;margin:auto;display:grid;place-items:center;"
-            "color:white;background:linear-gradient(135deg,#6f285f,#d85b91);"
-            "border-radius:14px;font-weight:900}p{color:#766b76}</style></head>"
-            "<body><main><div class=\"logo\">GL</div><h1>Acceso completado</h1>"
-            f"<p>Preparando tu espacio…</p><a href=\"{destination}\">Continuar</a>"
-            f"<script>window.location.replace({json.dumps(destination)})</script>"
-            "</main></body></html>"
-        ).encode()
-        self.send_response(HTTPStatus.OK)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
-        for name, value in headers.items():
-            self.send_header(name, value)
-        self.end_headers()
-        self.wfile.write(body)
 
     def _send_json(self, payload: Any, status: HTTPStatus = HTTPStatus.OK, *, headers: dict[str, str] | None = None) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")

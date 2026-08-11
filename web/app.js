@@ -18,10 +18,16 @@ const resultCount = document.querySelector("#result-count");
 const activeFilters = document.querySelector("#active-filters");
 const emptyState = document.querySelector("#empty-state");
 const dialog = document.querySelector("#detail-dialog");
+const sessionStorageKey = "glv_session";
+
+function sessionHeaders(headers = {}) {
+  const sessionToken = window.sessionStorage.getItem(sessionStorageKey);
+  return { ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}), ...headers };
+}
 
 async function loadIdentity() {
   try {
-    const response = await fetch("/api/auth/session");
+    const response = await fetch("/api/auth/session", { headers: sessionHeaders() });
     const session = await response.json();
     const login = document.querySelector("#google-login");
     if (!session.googleConfigured) {
@@ -39,9 +45,10 @@ async function loadIdentity() {
       event.preventDefault();
       await fetch("/api/auth/logout", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-GL-Verse-CSRF": session.csrfToken },
+        headers: sessionHeaders({ "Content-Type": "application/json", "X-GL-Verse-CSRF": session.csrfToken }),
         body: "{}",
       });
+      window.sessionStorage.removeItem(sessionStorageKey);
       window.location.reload();
     });
     login.replaceChildren(logout);
@@ -63,20 +70,16 @@ function loadGoogleLibrary() {
   });
 }
 
-function submitGoogleCredential(credential, config) {
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = "/api/auth/google";
-  form.target = "_top";
-  [["credential", credential], ["loginCsrf", config.loginCsrf]].forEach(([name, value]) => {
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = name;
-    input.value = value;
-    form.append(input);
+async function finishGoogleLogin(credential, config) {
+  const response = await fetch("/api/auth/google", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ credential, loginCsrf: config.loginCsrf }),
   });
-  document.body.append(form);
-  form.submit();
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "No se pudo iniciar sesión con Google");
+  return result;
 }
 
 async function setupGoogleLogin(container) {
@@ -87,7 +90,15 @@ async function setupGoogleLogin(container) {
   window.google.accounts.id.initialize({
     client_id: config.clientId,
     nonce: config.nonce,
-    callback: ({ credential }) => submitGoogleCredential(credential, config),
+    callback: async ({ credential }) => {
+      try {
+        const result = await finishGoogleLogin(credential, config);
+        window.sessionStorage.setItem(sessionStorageKey, result.sessionToken);
+        window.location.replace(result.nextPath);
+      } catch (error) {
+        container.textContent = error.message;
+      }
+    },
   });
   window.google.accounts.id.renderButton(container, { theme: "outline", size: "medium" });
 }

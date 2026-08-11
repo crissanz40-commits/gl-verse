@@ -2,6 +2,7 @@ let csrfToken = "";
 let currentUser = null;
 let series = [];
 let selected = null;
+const sessionStorageKey = "glv_session";
 
 const loginPanel = document.querySelector("#login-panel");
 const backoffice = document.querySelector("#backoffice");
@@ -10,7 +11,8 @@ const nullableFields = new Set(["originalTitle", "releaseDate", "synopsis", "cov
 const editableFields = ["title", "originalTitle", "country", "releaseYear", "releaseDate", "status", "synopsis", "coverImageUrl", "coverImageSourceUrl", "dramaLevel", "endingType", "endingNote"];
 
 async function api(url, options = {}) {
-  const response = await fetch(url, { ...options, headers: { "Content-Type": "application/json", ...(csrfToken ? { "X-GL-Verse-CSRF": csrfToken } : {}), ...(options.headers || {}) } });
+  const sessionToken = window.sessionStorage.getItem(sessionStorageKey);
+  const response = await fetch(url, { credentials: "same-origin", ...options, headers: { "Content-Type": "application/json", ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}), ...(csrfToken ? { "X-GL-Verse-CSRF": csrfToken } : {}), ...(options.headers || {}) } });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
   return payload;
@@ -28,20 +30,11 @@ function loadGoogleLibrary() {
   });
 }
 
-function submitGoogleCredential(credential, config) {
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = "/api/auth/google";
-  form.target = "_top";
-  [["credential", credential], ["loginCsrf", config.loginCsrf]].forEach(([name, value]) => {
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = name;
-    input.value = value;
-    form.append(input);
+async function finishGoogleLogin(credential, config) {
+  return api("/api/auth/google", {
+    method: "POST",
+    body: JSON.stringify({ credential, loginCsrf: config.loginCsrf }),
   });
-  document.body.append(form);
-  form.submit();
 }
 
 async function setupGoogleLogin() {
@@ -50,9 +43,15 @@ async function setupGoogleLogin() {
   window.google.accounts.id.initialize({
     client_id: config.clientId,
     nonce: config.nonce,
-    callback: ({ credential }) => {
+    callback: async ({ credential }) => {
       document.querySelector("#login-message").textContent = "Validando la cuenta con Google…";
-      submitGoogleCredential(credential, config);
+      try {
+        const result = await finishGoogleLogin(credential, config);
+        window.sessionStorage.setItem(sessionStorageKey, result.sessionToken);
+        window.location.replace(result.nextPath);
+      } catch (error) {
+        document.querySelector("#login-message").textContent = error.message;
+      }
     },
   });
   window.google.accounts.id.renderButton(document.querySelector("#google-login"), {
@@ -174,10 +173,10 @@ document.querySelector("#review-button").addEventListener("click", async (event)
 });
 
 document.querySelector("#logout-button").addEventListener("click", async () => {
-  try { await api("/api/auth/logout", { method: "POST", body: "{}" }); } finally { csrfToken = ""; currentUser = null; series = []; selected = null; window.location.assign("/"); }
+  try { await api("/api/auth/logout", { method: "POST", body: "{}" }); } finally { window.sessionStorage.removeItem(sessionStorageKey); csrfToken = ""; currentUser = null; series = []; selected = null; window.location.assign("/"); }
 });
 document.querySelector("#viewer-logout").addEventListener("click", async () => {
-  try { await api("/api/auth/logout", { method: "POST", body: "{}" }); } finally { window.location.assign("/"); }
+  try { await api("/api/auth/logout", { method: "POST", body: "{}" }); } finally { window.sessionStorage.removeItem(sessionStorageKey); window.location.assign("/"); }
 });
 document.querySelector("#admin-search").addEventListener("input", renderSeries);
 restoreSession();

@@ -2,7 +2,6 @@ import json
 import threading
 from http.cookiejar import CookieJar
 from urllib.error import HTTPError
-from urllib.parse import urlencode
 from urllib.request import HTTPCookieProcessor, Request, build_opener, urlopen
 
 import pytest
@@ -31,22 +30,22 @@ class FakeGoogleClient:
         return self.identity
 
 
-def login_with_google(opener, base_url: str, expected_destination: str) -> dict:
+def login_with_google(opener, base_url: str, expected_destination: str) -> tuple[dict, str]:
     with opener.open(f"{base_url}/api/auth/google/start?next=/admin") as response:
         config = json.load(response)
     login = Request(
         f"{base_url}/api/auth/google",
-        data=urlencode(
+        data=json.dumps(
             {"credential": "valid-token", "loginCsrf": config["loginCsrf"]}
         ).encode(),
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        headers={"Content-Type": "application/json"},
         method="POST",
     )
     with opener.open(login) as response:
-        completion = response.read().decode()
-    assert f"url={expected_destination}" in completion
+        result = json.load(response)
+    assert result["nextPath"] == expected_destination
     with opener.open(f"{base_url}/api/auth/session") as response:
-        return json.load(response)
+        return json.load(response), result["sessionToken"]
 
 
 def test_google_user_roles_bootstrap_admin_and_keep_existing_admin(connection) -> None:
@@ -108,7 +107,13 @@ def test_google_login_enforces_admin_role(tmp_path, email, admin_emails, expecte
         with pytest.raises(HTTPError) as unauthorized:
             urlopen(f"{base_url}/api/admin/series")
         destination = "/admin.html" if expected_status == 200 else "/"
-        session = login_with_google(opener, base_url, destination)
+        session, session_token = login_with_google(opener, base_url, destination)
+        bearer_request = Request(
+            f"{base_url}/api/auth/session",
+            headers={"Authorization": f"Bearer {session_token}"},
+        )
+        with urlopen(bearer_request) as response:
+            bearer_session = json.load(response)
         try:
             with opener.open(f"{base_url}/api/admin/series") as response:
                 status = response.status
@@ -130,6 +135,7 @@ def test_google_login_enforces_admin_role(tmp_path, email, admin_emails, expecte
         thread.join()
     assert unauthorized.value.code == 401
     assert session["user"]["role"] == ("admin" if expected_status == 200 else "viewer")
+    assert bearer_session["user"] == session["user"]
     assert status == expected_status
 
 
