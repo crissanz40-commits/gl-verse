@@ -56,6 +56,10 @@ def test_web_prototype_loads_relational_catalog_from_api() -> None:
     assert "item.companies.map" in javascript
     assert "item.collections.map" in javascript
     assert "item.seasons.map" in javascript
+    assert "item.reviewStatus" in javascript
+    assert 'data-review-series="${item.id}"' in javascript
+    assert 'method: "PUT"' in javascript
+    assert "/review-status" in javascript
 
 
 def test_web_prototype_does_not_duplicate_catalog_data() -> None:

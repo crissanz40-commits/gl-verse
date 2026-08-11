@@ -384,6 +384,8 @@ def _series(
         SELECT series.id, series.title, series.country, series.release_year,
                series.release_date, series.status, series.synopsis,
                series.cover_image_url, series.cover_image_source_url,
+               COALESCE(review.status, 'pending') AS review_status,
+               review.reviewed_at,
                COALESCE(
                    (
                        SELECT source.url
@@ -402,6 +404,7 @@ def _series(
                    series.cover_image_source_url
                ) AS release_date_source_url
         FROM series
+        LEFT JOIN series_review_status AS review ON review.series_id = series.id
         ORDER BY COALESCE(series.release_date, printf('%04d-12-31', series.release_year)) DESC,
                  series.title COLLATE NOCASE
         """
@@ -440,6 +443,8 @@ def _series(
             "releaseDateSourceUrl": row["release_date_source_url"],
             "country": row["country"],
             "status": row["status"],
+            "reviewStatus": row["review_status"],
+            "reviewedAt": row["reviewed_at"],
             "initials": _initials(row["title"]),
             "colors": _colors(row["id"]),
             "coverImageUrl": row["cover_image_url"],

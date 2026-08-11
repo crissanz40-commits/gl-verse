@@ -10,9 +10,10 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from gl_verse.catalog_api import catalog_payload
+from gl_verse.catalog_review import ReviewStatus, UnknownSeriesError, set_review_status
 from gl_verse.database import connect_database
 
 DEFAULT_WEB_ROOT = Path(__file__).parents[2] / "web"
@@ -35,6 +36,54 @@ class CatalogRequestHandler(SimpleHTTPRequestHandler):
             self._send_json({"error": "Recurso no encontrado"}, HTTPStatus.NOT_FOUND)
             return
         super().do_GET()
+
+    def do_PUT(self) -> None:
+        path = urlparse(self.path).path
+        parts = path.split("/")
+        if len(parts) == 5 and parts[1:3] == ["api", "series"] and parts[4] == "review-status":
+            self._update_review_status(unquote(parts[3]))
+            return
+        if path.startswith("/api/"):
+            self._send_json({"error": "Recurso no encontrado"}, HTTPStatus.NOT_FOUND)
+            return
+        self._send_json({"error": "Método no permitido"}, HTTPStatus.METHOD_NOT_ALLOWED)
+
+    def _update_review_status(self, series_id: str) -> None:
+        try:
+            content_length = int(self.headers.get("Content-Length", "0"))
+            if content_length < 1 or content_length > 4096:
+                raise ValueError
+            payload = json.loads(self.rfile.read(content_length))
+            if not isinstance(payload, dict) or set(payload) != {"status"}:
+                raise ValueError
+            status = ReviewStatus(payload["status"])
+        except (ValueError, TypeError, json.JSONDecodeError):
+            self._send_json(
+                {"error": "Estado de revisión no válido"},
+                HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        try:
+            with closing(connect_database(self.database_path)) as connection:
+                review = set_review_status(connection, series_id, status)
+        except UnknownSeriesError:
+            self._send_json({"error": "Serie no encontrada"}, HTTPStatus.NOT_FOUND)
+            return
+        except sqlite3.Error:
+            self._send_json(
+                {"error": "No se pudo guardar la revisión"},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+            return
+
+        self._send_json(
+            {
+                "seriesId": review.series_id,
+                "status": review.status.value,
+                "reviewedAt": review.reviewed_at,
+            }
+        )
 
     def _send_catalog(self) -> None:
         try:
