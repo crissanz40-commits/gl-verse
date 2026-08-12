@@ -9,7 +9,8 @@ La carpeta `web/` contiene la experiencia frontal responsive. El comando `gl-ver
 - búsqueda instantánea por serie, pareja ficticia o pareja artística;
 - filtros por pareja, país, mes y año de estreno;
 - orden por fecha de estreno o título;
-- lista personal y fichas navegables de series, parejas y actrices;
+- lista personal autenticada, progreso, puntuaciones y opiniones privadas;
+- fichas navegables de series, parejas y actrices;
 - trayectoria conjunta de cada pareja a través de sus series;
 - trayectoria individual de cada actriz, incluidas participaciones sin pareja;
 - espacios de portada e imagen preparados para mostrar su URL y fuente.
@@ -29,7 +30,9 @@ Después abre `http://127.0.0.1:8000` en el navegador. Puedes elegir otra base, 
 gl-verse web --database data/gl_verse.db --host 127.0.0.1 --port 8080
 ```
 
-`GET /api/health` permite comprobar que el proceso está activo. Las valoraciones personales y las guías de visionado siguen separadas del catálogo objetivo; sus filtros se activarán cuando esas capas estén persistidas.
+`GET /api/health` permite comprobar que el proceso está activo. Las valoraciones personales y las guías de visionado se mantienen separadas del catálogo objetivo.
+
+Cada cuenta autenticada puede gestionar su propia lista mediante `GET /api/me/library` y `PUT` o `DELETE /api/me/library/{series_id}`. Puede guardar el estado de visionado, progreso, nota, opinión y fechas sin exponer esos datos a otras cuentas. El formato y las garantías de privacidad se detallan en [`docs/personal-library.md`](docs/personal-library.md).
 
 ### Acceso con Google y backoffice
 
@@ -62,6 +65,7 @@ La persistencia utiliza migraciones SQL numeradas:
 - `011_series_review_status.sql`: guarda la aprobación editorial manual de cada ficha sin mezclarla con el estado de emisión.
 - `012_admin_backoffice.sql`: introduce la base del backoffice y su historial editorial.
 - `013_google_identity_roles.sql`: sustituye las credenciales locales por identidades Google con roles `admin` y `viewer`.
+- `014_personal_series_library.sql`: añade seguimiento, progreso y valoración privados por cuenta y serie.
 
 Una base nueva ejecuta todas las migraciones en orden. Una base existente aplica únicamente las versiones pendientes.
 
@@ -163,4 +167,4 @@ ruff check .
 
 ## Próximo paso
 
-Persistir la capa personal de visionado y valoraciones para activar “Mi lista”, la ordenación por nota y las recomendaciones.
+Aprovechar la capa personal ya persistida para añadir ordenación por nota y recomendaciones, manteniendo esos datos separados del catálogo objetivo.
