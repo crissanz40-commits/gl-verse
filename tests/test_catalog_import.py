@@ -143,6 +143,7 @@ def test_imports_a_complete_catalog_with_provenance(connection, catalog_data) ->
 
     assert summary.inserted == {
         "series": 1,
+        "series_image_replacements": 0,
         "people": 2,
         "characters": 2,
         "credits": 2,
@@ -424,6 +425,7 @@ def test_import_enriches_empty_optional_series_fields(connection, catalog_data) 
 
     assert summary.updated == {
         "series": 1,
+        "series_image_replacements": 0,
         "people": 0,
         "characters": 0,
         "credits": 0,
@@ -466,6 +468,96 @@ def test_import_rejects_overwriting_enriched_series_fields(connection, catalog_d
 
     with pytest.raises(CatalogConflictError, match="series"):
         import_catalog(connection, parse_catalog(catalog_data))
+
+
+def _series_image_replacement() -> dict:
+    return {
+        "format_version": 1,
+        "series_image_replacements": [
+            {
+                "series_id": "sample-series-2026",
+                "expected": {
+                    "url": "https://images.example/sample.jpg",
+                    "source_url": "https://example.com/sample",
+                },
+                "replacement": {
+                    "url": "https://images.example/new-sample.jpg",
+                    "source_url": "https://example.com/new-sample",
+                },
+            }
+        ],
+    }
+
+
+def test_import_replaces_a_known_series_image_atomically_and_idempotently(
+    connection, catalog_data
+) -> None:
+    import_catalog(connection, parse_catalog(catalog_data))
+    document = parse_catalog(_series_image_replacement())
+
+    first = import_catalog(connection, document)
+    second = import_catalog(connection, document)
+
+    assert first.updated["series_image_replacements"] == 1
+    assert second.unchanged["series_image_replacements"] == 1
+    row = connection.execute(
+        "SELECT cover_image_url, cover_image_source_url FROM series WHERE id = ?",
+        ("sample-series-2026",),
+    ).fetchone()
+    assert tuple(row) == (
+        "https://images.example/new-sample.jpg",
+        "https://example.com/new-sample",
+    )
+
+
+def test_import_rejects_a_stale_series_image_replacement(connection, catalog_data) -> None:
+    import_catalog(connection, parse_catalog(catalog_data))
+    replacement = _series_image_replacement()
+    replacement["series_image_replacements"][0]["expected"]["url"] = (
+        "https://images.example/stale.jpg"
+    )
+
+    with pytest.raises(CatalogConflictError, match="reemplazo de portada"):
+        import_catalog(connection, parse_catalog(replacement))
+
+    row = connection.execute(
+        "SELECT cover_image_url FROM series WHERE id = ?", ("sample-series-2026",)
+    ).fetchone()
+    assert row[0] == "https://images.example/sample.jpg"
+
+
+def test_stale_series_image_replacement_rolls_back_the_whole_document(
+    connection, catalog_data
+) -> None:
+    import_catalog(connection, parse_catalog(catalog_data))
+    replacement = _series_image_replacement()
+    replacement["series_image_replacements"][0]["expected"]["url"] = (
+        "https://images.example/stale.jpg"
+    )
+    replacement["sources"] = [
+        {
+            "id": "replacement-source",
+            "title": "Replacement source",
+            "url": "https://example.com/replacement-source",
+            "source_type": "database",
+        }
+    ]
+
+    with pytest.raises(CatalogConflictError, match="reemplazo de portada"):
+        import_catalog(connection, parse_catalog(replacement))
+
+    assert connection.execute(
+        "SELECT 1 FROM catalog_sources WHERE id = 'replacement-source'"
+    ).fetchone() is None
+
+
+@pytest.mark.parametrize("field", ["url", "source_url"])
+def test_rejects_non_web_series_image_replacement_urls(field) -> None:
+    replacement = _series_image_replacement()
+    replacement["series_image_replacements"][0]["replacement"][field] = "not-a-url"
+
+    with pytest.raises(CatalogImportError, match="debe ser una URL HTTP"):
+        parse_catalog(replacement)
 
 
 def test_import_enriches_empty_optional_person_and_pair_fields(connection, catalog_data) -> None:

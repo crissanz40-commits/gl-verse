@@ -19,6 +19,19 @@ El documento debe ser JSON UTF-8, declarar `format_version: 1` y utilizar única
       "cover_image_source_url": "https://example.com/official-page"
     }
   ],
+  "series_image_replacements": [
+    {
+      "series_id": "identificador-serie-2026",
+      "expected": {
+        "url": "https://images.example.com/cover-anterior.jpg",
+        "source_url": "https://example.com/fuente-anterior"
+      },
+      "replacement": {
+        "url": "https://images.example.com/cover-nueva.jpg",
+        "source_url": "https://example.com/fuente-nueva"
+      }
+    }
+  ],
   "platforms": [
     {
       "id": "example-stream",
@@ -86,6 +99,7 @@ El documento debe ser JSON UTF-8, declarar `format_version: 1` y utilizar única
 | Sección | Campos obligatorios | Campos opcionales |
 | --- | --- | --- |
 | `series` | `id`, `title`, `country`, `release_year`, `status` | `release_date`, `original_title`, `synopsis`, `cover_image_url`, `cover_image_source_url` |
+| `series_image_replacements` | `series_id`, `expected`, `replacement` | — |
 | `people` | `id`, `name` | `stage_name`, `nationality`, `image_url`, `image_source_url` |
 | `characters` | `id`, `name`, `series_id` | — |
 | `credits` | `series_id`, `person_id`, `role` | `character_id`, `cast_importance` |
@@ -108,6 +122,8 @@ El documento debe ser JSON UTF-8, declarar `format_version: 1` y utilizar única
 | `provenance` | `source_id`, `entity_type`, `entity_id`, `field_name`, `checked_on`, `status` | `note` |
 
 `person_ids` y `character_ids` contienen exactamente dos identificadores. Las imágenes siempre deben incluir tanto su URL directa como la página que acredita su procedencia.
+
+`series_image_replacements` es la única operación que sustituye una portada ya guardada. Tanto `expected` como `replacement` requieren `url` y `source_url`. La importación solo actualiza si las dos URLs actuales coinciden con `expected`; si ya coinciden con `replacement`, la operación es idempotente; cualquier otro estado se considera conflicto y revierte todo el lote. Debe conservarse la procedencia anterior y añadirse una fuente para la nueva imagen.
 
 `series_pairings` representa ante todo la pareja ficticia de dos personajes dentro de una serie. `acting_pair_id` solo se incluye cuando también existe una pareja artística verificada entre sus intérpretes. Los documentos anteriores que ya lo incluyen siguen siendo compatibles. Una carga posterior puede completar este vínculo si estaba vacío, pero no sustituir uno ya guardado. La combinación de serie y personajes es única con independencia del orden de `character_ids`.
 
